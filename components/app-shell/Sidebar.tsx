@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { RocketWordmark } from "@/components/ui/RocketWordmark";
 import { NAV_ITEMS } from "./nav-items";
+import { logOutAction } from "@/lib/actions/auth";
 
-export function Sidebar({ streak }: { streak: number }) {
+export function Sidebar({ streak, isAdmin }: { streak: number; isAdmin: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -26,6 +27,14 @@ export function Sidebar({ streak }: { streak: number }) {
             <span className="ic">{item.icon}</span> {item.label}
           </Link>
         ))}
+        {isAdmin && (
+          <Link
+            href="/admin/verification-codes"
+            className={pathname.startsWith("/admin") ? "active" : ""}
+          >
+            <span className="ic">🔑</span> Admin
+          </Link>
+        )}
       </nav>
       <div className="sidebar-foot">
         <div className="streak-mini">
@@ -34,6 +43,11 @@ export function Sidebar({ streak }: { streak: number }) {
             Sequência atual: <b>{streak} {streak === 1 ? "dia" : "dias"}</b>
           </span>
         </div>
+        <form action={logOutAction}>
+          <button type="submit" className="sidebar-logout">
+            Sair da conta
+          </button>
+        </form>
       </div>
     </div>
   );

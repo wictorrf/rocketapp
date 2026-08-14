@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getProfileForEdit } from "@/lib/queries/profile";
 import { EditProfileForm } from "@/components/profile/EditProfileForm";
 import { DeleteAccountSection } from "@/components/profile/DeleteAccountSection";
+import { logOutAction } from "@/lib/actions/auth";
 
 export default async function ProfilePage() {
   const profile = await getProfileForEdit();
@@ -26,6 +27,12 @@ export default async function ProfilePage() {
           .
         </p>
       </div>
+
+      <form action={logOutAction} style={{ marginTop: 20 }}>
+        <button type="submit" className="btn btn-ghost btn-block">
+          Sair da conta
+        </button>
+      </form>
 
       <DeleteAccountSection />
     </div>
