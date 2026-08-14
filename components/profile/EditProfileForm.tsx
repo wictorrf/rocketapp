@@ -1,0 +1,111 @@
+"use client";
+
+import { useActionState, useState } from "react";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { updateProfileAction, type ActionState } from "@/lib/actions/profile";
+import {
+  AREA_OPTIONS,
+  GENDER_OPTIONS,
+  computeDisplayTitle,
+  type Area,
+  type GenderTreatment,
+} from "@/lib/constants/title-map";
+import type { ProfileForEdit } from "@/lib/queries/profile";
+
+const initialState: ActionState = { error: null };
+
+export function EditProfileForm({ profile }: { profile: ProfileForEdit }) {
+  const [state, formAction] = useActionState(updateProfileAction, initialState);
+  const [fullName, setFullName] = useState(profile.fullName);
+  const [area, setArea] = useState<Area>(profile.area);
+  const [gender, setGender] = useState<GenderTreatment>(profile.genderTreatment);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(profile.photoUrl);
+
+  const displayTitle = computeDisplayTitle(fullName || "Você", area, gender);
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setPhotoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div className="card">
+      <h2 className="section-title">Meu perfil</h2>
+
+      <form action={formAction}>
+        <div className="photo-upload">
+          <label className="photo-circle" htmlFor="photo">
+            {photoPreview ? <img src={photoPreview} alt="" /> : <span>📷</span>}
+          </label>
+          <input
+            id="photo"
+            name="photo"
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handlePhotoChange}
+          />
+          <div className="photo-upload-text">
+            <b>Sua foto</b>
+            <span>Aparece em toda a plataforma</span>
+          </div>
+        </div>
+
+        <div className="field">
+          <label>E-mail</label>
+          <input type="email" value={profile.email} disabled />
+        </div>
+
+        <div className="field">
+          <label htmlFor="fullName">Nome</label>
+          <input
+            id="fullName"
+            name="fullName"
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="area">Área de atuação</label>
+            <select id="area" name="area" value={area} onChange={(e) => setArea(e.target.value as Area)}>
+              {AREA_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="gender">Tratamento</label>
+            <select
+              id="gender"
+              name="gender"
+              value={gender}
+              onChange={(e) => setGender(e.target.value as GenderTreatment)}
+            >
+              {GENDER_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="title-preview">
+          Você será chamada de <b>{displayTitle}</b> em toda a plataforma.
+        </div>
+
+        {state.error && <p className="error-text">{state.error}</p>}
+        <SubmitButton pendingText="Salvando...">Salvar alterações</SubmitButton>
+      </form>
+    </div>
+  );
+}

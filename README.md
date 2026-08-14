@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rocket
 
-## Getting Started
+App de estudos da Comunidade RC — repetição espaçada (SM-2), calendário, disciplinas/assuntos, métricas e Modo Foco.
 
-First, run the development server:
+## Rodando localmente
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000). O app não funciona sem um projeto Supabase configurado — siga [supabase/README.md](supabase/README.md) para criar o banco e preencher `.env.local` (copie `.env.local.example`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build de produção
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+```
 
-## Learn More
+O script `build` força `next build --webpack`. Em ambiente local, o download das fontes do Google (`next/font/google`) às vezes falha de forma intermitente durante o build com Turbopack (URLs de `fonts.gstatic.com` retornando 404) — trocar pra webpack reduziu bastante essa instabilidade, mas se o build falhar mesmo assim, rode de novo (é falha de rede pontual buscando as fontes, não um erro de código). Não esperamos isso na Vercel, que tem um caminho de rede mais estável até o Google Fonts — mas vale confirmar no primeiro deploy.
 
-To learn more about Next.js, take a look at the following resources:
+## Estrutura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `app/` — rotas (App Router), agrupadas por contexto: `(marketing)`, `(auth)`, `(onboarding)`, `(app)` (shell com sidebar), `(standalone)` (telas cheias sem sidebar, ex: novo flashcard e revisão), `admin/`.
+- `lib/queries/` — leituras (Server Components).
+- `lib/actions/` — Server Actions (mutações).
+- `lib/srs/sm2.ts` — algoritmo de repetição espaçada.
+- `components/` — organizados por área da UI.
+- `supabase/migrations/` — schema do banco, aplicado manualmente via SQL Editor (ver `supabase/README.md`).

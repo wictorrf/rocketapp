@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rocket, por Comunidade RC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Nunito:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ice: #EEF2F1;
+    --ice-dim: #E2E8E6;
+    --wine: #6E1E33;
+    --wine-bright: #8C2846;
+    --wine-deep: #4E1524;
+    --pink: #F2A6C1;
+    --pink-soft: #FBE3EC;
+    --coal: #17181A;
+    --coal-soft: #24262A;
+    --white: #FFFFFF;
+    --text: #1F2023;
+    --text-muted: #6B6F76;
+    --line: #E1E5E4;
+    --green: #4C8B6E;
+    --amber: #C98A2C;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --shadow: 0 4px 18px rgba(23,24,26,0.06);
+    --shadow-lift: 0 14px 34px rgba(23,24,26,0.12);
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Nunito', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --font-script: 'Dancing Script', cursive;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family: var(--font-body); background: var(--ice); color: var(--text); -webkit-font-smoothing: antialiased; }
+  ::selection{ background: var(--pink); color: var(--wine-deep); }
+
+  /* ---------- PROTOTYPE NAV ---------- */
+  .proto-bar{ position: sticky; top:0; z-index: 200; display:flex; align-items:center; gap:6px; background: var(--coal); padding: 10px 16px; overflow-x:auto; }
+  .proto-bar .label{ color: rgba(255,255,255,0.4); font-size: 11px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; margin-right: 8px; white-space:nowrap; }
+  .proto-tab{ font-family: var(--font-body); font-weight: 700; font-size: 12.5px; color: rgba(255,255,255,0.65); background: transparent; border: 1px solid rgba(255,255,255,0.15); padding: 7px 13px; border-radius: 999px; cursor:pointer; white-space:nowrap; transition: all .15s ease; }
+  .proto-tab:hover{ color:#fff; border-color: rgba(255,255,255,0.35); }
+  .proto-tab.active{ background: var(--pink); color: var(--wine-deep); border-color: var(--pink); }
+
+  .screen{ display:none; min-height: 100vh; }
+  .screen.active{ display:block; }
+
+  /* ---------- shared bits ---------- */
+  .rc-badge{ font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--wine); background: var(--pink-soft); padding: 5px 12px; border-radius: 999px; font-weight: 700; display:inline-flex; align-items:center; gap:6px; }
+  .rc-badge.on-dark{ color: var(--pink); background: rgba(255,255,255,0.1); }
+  .rocket-icon{ width:1em; height:1em; display:inline-block; vertical-align:-0.12em; }
+  .btn{ font-family: var(--font-body); font-weight: 800; font-size: 14px; border:none; cursor:pointer; padding: 12px 22px; border-radius: 999px; transition: transform .12s ease, box-shadow .12s ease; }
+  .btn:active{ transform: scale(0.97); }
+  .btn-primary{ background: var(--wine); color:#fff; }
+  .btn-primary:hover{ background: var(--wine-bright); }
+  .btn-ghost{ background: transparent; color: var(--wine); border: 1.5px solid var(--wine); }
+  .btn-pink{ background: var(--pink); color: var(--wine-deep); }
+  .btn-sm{ padding: 8px 16px; font-size:13px; }
+  .btn-block{ width:100%; }
+  h2.section-title{ font-family: var(--font-display); font-weight: 600; font-size: 19px; margin-bottom: 14px; }
+
+  /* ================= SCREEN 0: LANDING ================= */
+  .landing{ min-height:100vh; display:flex; flex-direction:column; background: var(--ice); position:relative; overflow:hidden; }
+  .landing-nav{ display:flex; align-items:center; justify-content:space-between; padding: 26px 52px; z-index:2; }
+  .rocket-wordmark{ display:flex; align-items:center; gap:9px; font-family: var(--font-display); font-weight:600; font-style:italic; font-size:24px; color: var(--wine-deep); }
+  .rocket-wordmark .dot{ color: var(--pink); font-style:normal; }
+  .landing-nav-right{ display:flex; align-items:center; gap:22px; }
+  .landing-nav-right a{ font-weight:800; font-size:14px; color: var(--text); text-decoration:none; cursor:pointer; }
+
+  .landing-hero{ flex:1; display:grid; grid-template-columns: 1fr 0.95fr; align-items:center; gap:30px; padding: 10px 52px 40px; position:relative; z-index:2; }
+  .landing-copy .eyebrow-badge{ margin-bottom:18px; }
+  .landing-copy h1{ font-family: var(--font-display); font-weight:600; font-size:46px; line-height:1.14; color: var(--text); }
+  .landing-copy h1 em{ font-style:italic; color: var(--wine); }
+  .landing-copy p.lead{ font-size:16px; color: var(--text-muted); margin: 20px 0 30px; max-width:460px; line-height:1.65; font-weight:600; }
+  .landing-cta-row{ display:flex; align-items:center; gap:16px; }
+  .landing-cta-row .btn-primary{ padding: 14px 28px; font-size:15px; }
+  .landing-note{ font-family: var(--font-script); color: var(--wine); font-size:21px; margin-top:22px; display:inline-block; }
+
+  .landing-eyebrow{ display:flex; align-items:center; gap:7px; font-family: var(--font-mono); font-size:12px; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color: var(--wine); margin-bottom:16px; }
+
+  /* ---- phone mockup collage (hero visual) ---- */
+  .phone-collage{ position:relative; height:500px; }
+  .blob{ position:absolute; z-index:0; }
+  .blob.b1{ width:360px; height:360px; background: var(--pink-soft); top:-40px; left:-30px; border-radius: 44% 56% 62% 38% / 45% 42% 58% 55%; opacity:0.9; }
+  .blob.b2{ width:260px; height:260px; background: var(--ice-dim); bottom:-20px; right:-10px; border-radius: 52% 48% 38% 62% / 55% 40% 60% 45%; opacity:0.85; }
+
+  .phone{ position:absolute; background: #141416; border-radius: 32px; padding:7px; box-shadow: var(--shadow-lift); }
+  .phone .pscreen{ width:100%; height:100%; background: var(--white); border-radius: 25px; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .phone .pstatus{ display:flex; align-items:center; justify-content:space-between; padding:9px 14px 2px; font-family: var(--font-mono); font-size:9px; color: var(--text-muted); flex-shrink:0; }
+  .phone .pdot{ width:5px; height:5px; border-radius:50%; background:#141416; margin:0 auto; }
+
+  .phone-focus{ width:180px; height:388px; top:56px; left:0; transform: rotate(-9deg); z-index:1; }
+  .phone-focus .pscreen{ background: var(--wine-deep); }
+  .phone-focus .pstatus{ color: rgba(255,255,255,0.5); }
+  .pf-mini-label{ text-align:center; color: rgba(255,255,255,0.5); font-size:9px; font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.06em; margin-top:20px; }
+  .pf-mini-ring{ width:104px; height:104px; border-radius:50%; border:2px solid rgba(255,255,255,0.2); margin:14px auto 0; display:flex; align-items:center; justify-content:center; }
+  .pf-mini-ring span{ font-family: var(--font-mono); font-weight:600; font-size:19px; color:#fff; }
+  .pf-mini-play{ width:34px; height:34px; border-radius:50%; background:#fff; color:var(--wine-deep); display:flex; align-items:center; justify-content:center; margin:22px auto 0; font-size:13px; }
+
+  .phone-home{ width:184px; height:392px; top:36px; right:2px; transform: rotate(8deg); z-index:1; }
+  .ph-mini-hero{ background: linear-gradient(120deg, var(--wine-deep), var(--wine)); padding:12px 12px 14px; color:#fff; }
+  .ph-mini-hero .sc{ font-family: var(--font-script); font-size:12px; color: var(--pink); display:block; }
+  .ph-mini-hero b{ font-family: var(--font-display); font-size:14px; font-weight:600; display:block; margin-top:1px; }
+  .ph-mini-stats{ display:flex; gap:6px; padding:10px; }
+  .ph-mini-stats div{ flex:1; background: var(--ice); border-radius:8px; padding:8px 6px; }
+  .ph-mini-stats span{ font-size:8px; color: var(--text-muted); font-weight:800; text-transform:uppercase; }
+  .ph-mini-stats b{ display:block; font-family: var(--font-mono); font-size:14px; margin-top:2px; }
+  .ph-mini-streak{ margin:0 10px; background:var(--coal); border-radius:8px; padding:10px; text-align:center; }
+  .ph-mini-streak span{ font-size:8px; color:rgba(255,255,255,0.5); font-weight:800; text-transform:uppercase; }
+  .ph-mini-streak b{ display:block; font-family:var(--font-mono); color:var(--pink); font-size:15px; margin-top:2px; }
+
+  .phone-calendar{ width:220px; height:460px; top:2px; left:112px; transform: rotate(-1.5deg); z-index:2; }
+  .pc-topbar{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px 8px; border-bottom:1px solid var(--line); }
+  .pc-topbar b{ font-family: var(--font-display); font-weight:600; font-size:13px; }
+  .pc-dot-nav{ width:16px; height:16px; border-radius:50%; background:var(--ice); }
+  .pc-month-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px 6px; }
+  .pc-month-row b{ font-family: var(--font-display); font-size:12px; font-weight:600; }
+  .pc-legend{ display:flex; gap:7px; padding:0 12px 8px; }
+  .pc-legend span{ display:flex; align-items:center; gap:3px; font-size:7px; color: var(--text-muted); font-weight:700; }
+  .pc-legend i{ width:6px; height:6px; border-radius:50%; display:inline-block; }
+  .pc-grid{ display:grid; grid-template-columns: repeat(7,1fr); gap:3px; padding: 0 10px; flex:1; }
+  .pc-cell{ background: var(--ice); border-radius:4px; aspect-ratio:1/1.15; position:relative; }
+  .pc-cell.today{ background: var(--wine); }
+  .pc-cell i{ position:absolute; bottom:2px; left:2px; right:2px; height:4px; border-radius:2px; }
+  .pc-ritual{ margin:10px; background: var(--coal); border-radius:10px; padding:9px 10px; display:flex; align-items:center; gap:7px; }
+  .pc-ritual .ic{ width:20px; height:20px; border-radius:6px; background:var(--pink); color:var(--wine-deep); display:flex; align-items:center; justify-content:center; font-size:10px; flex-shrink:0; }
+  .pc-ritual b{ display:block; font-size:9px; color:#fff; }
+  .pc-ritual span{ font-size:7.5px; color: rgba(255,255,255,0.55); }
+
+  .trail-svg{ position:absolute; top:-20px; right:-40px; width:420px; height:480px; z-index:1; opacity:0.9; pointer-events:none; }
+
+  .landing-footer{ position:relative; z-index:2; text-align:center; padding: 26px 20px 36px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .landing-footer .sig{ font-family: var(--font-script); font-size:19px; color: var(--text-muted); }
+
+  /* ================= SCREEN AUTH ================= */
+  .auth-wrap{ min-height:100vh; display:grid; grid-template-columns: 1fr 1fr; }
+  .auth-side{ background: var(--wine-deep); position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; padding: 44px; }
+  .auth-side .rocket-wordmark{ color:#fff; }
+  .auth-side-mid{ z-index:2; }
+  .auth-side-mid h3{ font-family: var(--font-display); font-weight:600; font-size:28px; color:#fff; max-width:340px; line-height:1.3; }
+  .auth-side-mid p{ color: rgba(255,255,255,0.65); font-size:14px; margin-top:14px; max-width:320px; line-height:1.6; }
+  .auth-side-foot{ z-index:2; font-family: var(--font-mono); font-size:11.5px; color: rgba(255,255,255,0.4); }
+
+  .auth-panel{ display:flex; align-items:center; justify-content:center; padding: 50px; }
+  .auth-box{ width:100%; max-width: 400px; }
+  .auth-tabs{ display:flex; gap:4px; background: var(--ice); padding:4px; border-radius:999px; margin-bottom: 30px; }
+  .auth-tabs button{ flex:1; border:none; background:transparent; padding: 10px; border-radius:999px; font-family: var(--font-body); font-weight:800; font-size:13.5px; cursor:pointer; color: var(--text-muted); }
+  .auth-tabs button.active{ background: var(--white); color: var(--wine); box-shadow: var(--shadow); }
+  .field{ margin-bottom: 17px; }
+  .field label{ display:block; font-size: 12px; font-weight:800; color: var(--text-muted); margin-bottom:6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .field input, .field select{ width:100%; padding: 13px 15px; border-radius: var(--radius-sm); border: 1.5px solid var(--line); font-family: var(--font-body); font-size: 14.5px; font-weight:600; background: var(--white); color: var(--text); }
+  .field input:focus, .field select:focus{ outline:none; border-color: var(--wine); }
+  .auth-switch{ text-align:center; margin-top:20px; font-size:13.5px; color: var(--text-muted); }
+  .auth-switch b{ color: var(--wine); cursor:pointer; }
+
+  /* ================= SCREEN PERSONALIZE ================= */
+  .personalize-wrap{ min-height:100vh; display:grid; grid-template-columns: 1fr 1fr; }
+  .personalize-preview{ background: var(--wine-deep); display:flex; align-items:center; justify-content:center; padding:50px; position:relative; overflow:hidden; }
+  .preview-shell{ width:100%; max-width:360px; background: var(--white); border-radius: var(--radius-lg); overflow:hidden; box-shadow: var(--shadow-lift); z-index:2; }
+  .preview-topbar{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--line); }
+  .preview-topbar .rocket-wordmark{ font-size:16px; }
+  .preview-chip{ display:flex; align-items:center; gap:9px; }
+  .preview-chip .pc-photo{ width:34px; height:34px; border-radius:50%; background: var(--pink-soft); display:flex; align-items:center; justify-content:center; overflow:hidden; border:2px solid var(--pink); color:var(--wine); font-size:14px; }
+  .preview-chip .pc-photo img{ width:100%; height:100%; object-fit:cover; }
+  .preview-chip .pc-name{ font-size:12.5px; font-weight:800; line-height:1.2; }
+  .preview-chip .pc-role{ font-size:10.5px; color: var(--text-muted); }
+  .preview-hero{ padding: 22px 18px; background: linear-gradient(120deg, var(--wine-deep), var(--wine)); color:#fff; }
+  .preview-hero .script{ font-family: var(--font-script); font-size:17px; color: var(--pink); display:block; }
+  .preview-hero h4{ font-family: var(--font-display); font-weight:600; font-size:19px; margin-top:2px; }
+  .preview-hero p{ font-size:11.5px; color: rgba(255,255,255,0.7); margin-top:6px; }
+  .preview-cards{ padding: 16px 18px 22px; display:flex; gap:10px; }
+  .preview-cards .pcard{ flex:1; background: var(--ice); border-radius: 10px; padding:10px; }
+  .preview-cards .pcard span{ font-size:9.5px; color: var(--text-muted); font-weight:800; text-transform:uppercase; }
+  .preview-cards .pcard b{ display:block; font-family: var(--font-mono); font-size:16px; margin-top:3px; }
+
+  .personalize-form{ display:flex; align-items:center; justify-content:center; padding: 50px; }
+  .pf-box{ width:100%; max-width:420px; }
+  .pf-box .step{ font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .pf-box h2{ font-family: var(--font-display); font-weight: 600; font-size: 27px; margin-bottom: 8px; }
+  .pf-box .pf-lead{ font-size:14px; color: var(--text-muted); margin-bottom:26px; line-height:1.5; }
+  .photo-upload{ display:flex; align-items:center; gap:16px; margin-bottom: 24px; }
+  .photo-circle{ width: 78px; height:78px; border-radius:50%; background: var(--pink-soft); border: 2px dashed var(--pink); display:flex; align-items:center; justify-content:center; color: var(--wine); font-size:20px; cursor:pointer; overflow:hidden; flex-shrink:0; }
+  .photo-circle img{ width:100%; height:100%; object-fit:cover; }
+  .photo-upload-text b{ display:block; font-size:14px; }
+  .photo-upload-text span{ font-size:12.5px; color: var(--text-muted); }
+  .field-row{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  .title-preview{ background: var(--pink-soft); border-radius: var(--radius-sm); padding: 12px 15px; font-size: 13.5px; color: var(--wine-deep); margin-bottom: 22px; font-weight: 700; }
+  .title-preview b{ font-family: var(--font-display); font-weight:600; font-size:15px; }
+
+  /* ================= SCREEN GET TO KNOW ================= */
+  .getknow-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding: 40px; background: var(--ice); }
+  .getknow-box{ width:100%; max-width:600px; background: var(--white); border-radius: var(--radius-lg); padding: 40px 44px; box-shadow: var(--shadow-lift); }
+  .gk-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 30px; }
+  .gk-top .gk-back{ width:34px; height:34px; border-radius:50%; background: var(--ice); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .gk-skip{ font-size:12.5px; font-weight:800; color: var(--text-muted); cursor:pointer; }
+  .step-track{ position:relative; display:flex; justify-content:space-between; margin-bottom: 34px; }
+  .step-track::before{ content:""; position:absolute; top:12px; left:12px; right:12px; height:2px; background: var(--line); z-index:0; }
+  .step-track .fill-line{ position:absolute; top:12px; left:12px; height:2px; background: var(--wine); z-index:1; transition: width .35s ease; }
+  .step-dot{ position:relative; z-index:2; width:26px; height:26px; border-radius:50%; background: var(--white); border:2px solid var(--line); display:flex; align-items:center; justify-content:center; font-family: var(--font-mono); font-size:10.5px; color: var(--text-muted); font-weight:700; }
+  .step-dot.done{ background: var(--wine); border-color: var(--wine); color:#fff; }
+  .step-dot.current{ border-color: var(--wine); color: var(--wine); background: var(--pink-soft); box-shadow: 0 0 0 5px var(--pink-soft); }
+
+  .gk-qcount{ font-family: var(--font-mono); font-size:11.5px; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; }
+  .gk-question{ font-family: var(--font-display); font-weight:600; font-size: 23px; margin-bottom: 22px; }
+  .opt-card{ display:flex; align-items:center; gap:14px; padding:15px 18px; border-radius: var(--radius-md); border:1.5px solid var(--line); margin-bottom:11px; cursor:pointer; transition: all .15s ease; }
+  .opt-card:hover{ border-color: var(--pink); }
+  .opt-card.selected{ background: var(--wine); border-color: var(--wine); }
+  .opt-card.selected .oc-text b, .opt-card.selected .oc-text span{ color:#fff; }
+  .opt-card .oc-icon{ font-size:17px; width:22px; text-align:center; flex-shrink:0; }
+  .oc-text b{ font-size:14px; display:block; }
+  .oc-text span{ font-size:12px; color: var(--text-muted); }
+  .gk-actions{ display:flex; justify-content:space-between; align-items:center; margin-top: 28px; }
+  .gk-actions .btn{ min-width: 130px; }
+
+  @media (max-width: 900px){
+    .landing-hero, .auth-wrap, .personalize-wrap{ grid-template-columns: 1fr; }
+    .auth-side, .personalize-preview{ display:none; }
+    .phone-collage{ height:340px; transform: scale(0.78); transform-origin: top left; }
+    .landing-nav{ padding:20px 24px; }
+    .landing-hero{ padding: 10px 24px 30px; }
+    .landing-copy h1{ font-size:32px; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="rocket-svg" viewBox="0 0 24 24" fill="none">
+    <path d="M12 2.5c2.8 1.6 4.5 4.9 4.5 8.6 0 2-.5 3.8-1.3 5.3l-3.2 2.6-3.2-2.6C7.9 14.9 7.4 13.1 7.4 11.1c0-3.7 1.7-7 4.6-8.6z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+    <circle cx="12" cy="10.5" r="1.6" stroke="currentColor" stroke-width="1.3"/>
+    <path d="M8.4 15.8l-2.1 1.2c-.5.3-.8.8-.8 1.4v1.6l2.4-1.1M15.6 15.8l2.1 1.2c.5.3.8.8.8 1.4v1.6l-2.4-1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M10.6 18.5s-.3 1.7.9 2.6c.1.1.3.1.5 0 1.2-.9.9-2.6.9-2.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+</svg>
+
+<!-- PROTOTYPE NAVIGATION -->
+<div class="proto-bar">
+  <span class="label">Wireframe →</span>
+  <button class="proto-tab active" data-screen="s-landing">0. Landing</button>
+  <button class="proto-tab" data-screen="s-auth">1. Criar conta</button>
+  <button class="proto-tab" data-screen="s-personalize">2. Personalizar</button>
+  <button class="proto-tab" data-screen="s-getknow">3. Te conhecer</button>
+  <button class="proto-tab" data-screen="s-home">4. Home</button>
+  <button class="proto-tab" data-screen="s-calendar">5. Calendário</button>
+  <button class="proto-tab" data-screen="s-subjects">6. Disciplinas</button>
+  <button class="proto-tab" data-screen="s-metrics">7. Métricas</button>
+  <button class="proto-tab" data-screen="s-timer">8. Modo Foco</button>
+  <button class="proto-tab" data-screen="s-subject-detail">9. Assunto e Flashcards</button>
+  <button class="proto-tab" data-screen="s-flashcard-new">10. Novo Flashcard</button>
+  <button class="proto-tab" data-screen="s-flashcard-review">11. Revisão</button>
+  <button class="proto-tab" data-screen="s-flashcard-summary">12. Resumo da sessão</button>
+</div>
+
+<!-- ============ SCREEN 0: LANDING ============ -->
+<div class="screen active" id="s-landing">
+  <div class="landing">
+    <svg class="trail-svg" viewBox="0 0 420 480">
+      <path d="M40 460 C 120 380, 90 260, 200 200 S 340 80, 380 20" stroke="#8C2846" stroke-width="1.6" stroke-dasharray="1 10" stroke-linecap="round" fill="none" opacity="0.5"/>
+      <g transform="translate(365,10) rotate(35)"><use href="#rocket-svg" width="26" height="26" color="#6E1E33"/></g>
+    </svg>
+
+    <div class="landing-nav">
+      <div class="rocket-wordmark"><svg class="rocket-icon" width="22" height="22"><use href="#rocket-svg"/></svg>Rocket</div>
+      <div class="landing-nav-right">
+        <a onclick="switchScreen('s-auth'); setAuthTab('login')">Entrar</a>
+      </div>
+    </div>
+
+    <div class="landing-hero">
+      <div class="landing-copy">
+        <div class="landing-eyebrow"><svg class="rocket-icon" width="12" height="12"><use href="#rocket-svg"/></svg>Sua rotina clínica, organizada</div>
+        <h1>Você sabe exatamente <em>o quanto avançou</em> essa semana?</h1>
+        <p class="lead">O Rocket organiza suas revisões, mostra onde focar e transforma cada hora de estudo em progresso visível, para você chegar mais confiante em cada prova e em cada plantão.</p>
+        <div class="landing-cta-row">
+          <button class="btn btn-primary" onclick="switchScreen('s-auth'); setAuthTab('signup')">Criar minha conta</button>
+          <button class="btn btn-ghost" onclick="switchScreen('s-auth'); setAuthTab('login')">Já tenho conta</button>
+        </div>
+        <span class="landing-note">sua evolução, dia após dia</span>
+      </div>
+
+      <div class="phone-collage">
+        <div class="blob b1"></div>
+        <div class="blob b2"></div>
+
+        <div class="phone phone-focus">
+          <div class="pscreen">
+            <div class="pstatus"><span>9:30</span><span>●</span></div>
+            <div class="pf-mini-label">Tempo de foco</div>
+            <div class="pf-mini-ring"><span>25:00</span></div>
+            <div class="pf-mini-play">▶</div>
+          </div>
+        </div>
+
+        <div class="phone phone-home">
+          <div class="pscreen">
+            <div class="pstatus" style="color:var(--text-muted)"><span>9:30</span><span>●</span></div>
+            <div class="ph-mini-hero">
+              <span class="sc">Bem-vinda,</span>
+              <b>Dra. Raissa</b>
+            </div>
+            <div class="ph-mini-streak">
+              <span>Constância</span>
+              <b>🔥 4 dias</b>
+            </div>
+            <div class="ph-mini-stats">
+              <div><span>Horas</span><b>38h</b></div>
+              <div><span>Acertos</span><b>78%</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phone phone-calendar">
+          <div class="pscreen">
+            <div class="pstatus"><span>9:30</span><span>●</span></div>
+            <div class="pc-topbar"><b>Calendário</b><div class="pc-dot-nav"></div></div>
+            <div class="pc-month-row"><b>Agosto 2026</b></div>
+            <div class="pc-legend">
+              <span><i style="background:var(--green)"></i>Revisão</span>
+              <span><i style="background:var(--wine)"></i>Prova</span>
+              <span><i style="background:var(--pink)"></i>1º contato</span>
+            </div>
+            <div class="pc-grid" id="pcGridMini"></div>
+            <div class="pc-ritual">
+              <div class="ic"><svg class="rocket-icon" width="10" height="10"><use href="#rocket-svg"/></svg></div>
+              <div><b>Planejar agosto</b><span>Ritual mensal</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="landing-footer">
+      <span class="rc-badge"><svg class="rocket-icon" width="11" height="11"><use href="#rocket-svg"/></svg>Exclusivo da Comunidade RC</span>
+      <span class="sig">Por Raissa Alves</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 1: AUTH (CRIAR CONTA / ENTRAR) ============ -->
+<div class="screen" id="s-auth">
+  <div class="auth-wrap">
+    <div class="auth-side">
+      <div class="rocket-wordmark"><svg class="rocket-icon" width="22" height="22"><use href="#rocket-svg"/></svg>Rocket</div>
+      <svg class="trail-svg" viewBox="0 0 420 480" style="top:auto; bottom:-60px; right:-80px; opacity:0.35;">
+        <path d="M20 20 C 100 100, 80 220, 190 280 S 330 400, 370 460" stroke="#F2A6C1" stroke-width="1.6" stroke-dasharray="1 10" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="auth-side-mid">
+        <h3>Cada hora de estudo, registrada. Cada avanço, visível.</h3>
+        <p>Em poucos minutos você organiza sua rotina e começa a acompanhar sua evolução de verdade.</p>
+      </div>
+      <div class="auth-side-foot">UMA PLATAFORMA COMUNIDADE RC</div>
+    </div>
+
+    <div class="auth-panel">
+      <div class="auth-box">
+        <div class="auth-tabs">
+          <button id="tabSignup" class="active" onclick="setAuthTab('signup')">Criar conta</button>
+          <button id="tabLogin" onclick="setAuthTab('login')">Entrar</button>
+        </div>
+
+        <div id="formSignup">
+          <div class="field"><label>Nome completo</label><input type="text" placeholder="Como podemos te chamar"></div>
+          <div class="field"><label>Email</label><input type="email" placeholder="seuemail@exemplo.com"></div>
+          <div class="field"><label>Senha</label><input type="password" placeholder="Crie uma senha"></div>
+          <button class="btn btn-primary btn-block" onclick="switchScreen('s-personalize')">Criar conta</button>
+        </div>
+
+        <div id="formLogin" style="display:none;">
+          <div class="field"><label>Email</label><input type="email" placeholder="seuemail@exemplo.com"></div>
+          <div class="field"><label>Senha</label><input type="password" placeholder="Sua senha"></div>
+          <button class="btn btn-primary btn-block" onclick="switchScreen('s-home')">Entrar</button>
+        </div>
+
+        <div class="auth-switch" id="authSwitchText">
+          Já tem uma conta? <b onclick="setAuthTab('login')">Entrar</b>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 2: PERSONALIZE SEU AMBIENTE ============ -->
+<div class="screen" id="s-personalize">
+  <div class="personalize-wrap">
+    <div class="personalize-preview">
+      <svg class="trail-svg" viewBox="0 0 420 480" style="opacity:0.25;">
+        <path d="M40 460 C 120 380, 90 260, 200 200 S 340 80, 380 20" stroke="#F2A6C1" stroke-width="1.6" stroke-dasharray="1 10" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="preview-shell">
+        <div class="preview-topbar">
+          <div class="rocket-wordmark"><svg class="rocket-icon" width="15" height="15"><use href="#rocket-svg"/></svg>Rocket</div>
+          <div class="preview-chip">
+            <div class="pc-photo" id="pvPhoto">👤</div>
+            <div>
+              <div class="pc-name" id="pvName">Dra. Raissa</div>
+              <div class="pc-role" id="pvRole">Medicina</div>
+            </div>
+          </div>
+        </div>
+        <div class="preview-hero">
+          <span class="script">Bem-vinda,</span>
+          <h4 id="pvHeroName">Dra. Raissa</h4>
+          <p>Sua rotina de estudos começa agora</p>
+        </div>
+        <div class="preview-cards">
+          <div class="pcard"><span>Horas</span><b>0h</b></div>
+          <div class="pcard"><span>Sequência</span><b>0 dias</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="personalize-form">
+      <div class="pf-box">
+        <div class="step">PASSO 1 DE 2</div>
+        <h2>Personalize seu ambiente</h2>
+        <p class="pf-lead">Assim a plataforma já te trata do jeito certo em cada tela.</p>
+
+        <div class="photo-upload">
+          <label class="photo-circle" id="photoTrigger">
+            <img id="photoPreview" style="display:none;">
+            <span id="photoIcon">📷</span>
+          </label>
+          <input type="file" id="photoInput" accept="image/*" style="display:none;">
+          <div class="photo-upload-text">
+            <b>Sua foto</b>
+            <span>Aparece em toda a plataforma</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Nome</label>
+          <input type="text" id="inputName" value="Raissa Alves" oninput="updatePreview()">
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Área de atuação</label>
+            <select id="inputArea" onchange="updatePreview()">
+              <option value="medicina">Medicina</option>
+              <option value="enfermagem">Enfermagem</option>
+              <option value="psicologia">Psicologia</option>
+              <option value="odontologia">Odontologia</option>
+              <option value="fisioterapia">Fisioterapia</option>
+              <option value="outra">Outra área da saúde</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tratamento</label>
+            <select id="inputGender" onchange="updatePreview()">
+              <option value="a">Feminino</option>
+              <option value="o">Masculino</option>
+              <option value="x">Neutro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="title-preview" id="titlePreview">
+          Você será chamada de <b>Dra. Raissa</b> em toda a plataforma.
+        </div>
+
+        <button class="btn btn-primary btn-block" onclick="switchScreen('s-getknow')">Continuar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 3: VAMOS TE CONHECER ============ -->
+<div class="screen" id="s-getknow">
+  <div class="getknow-wrap">
+    <div class="getknow-box">
+      <div class="gk-top">
+        <div class="gk-back" onclick="gkPrev()">‹</div>
+        <span class="gk-skip" onclick="switchScreen('s-home')">Pular por enquanto</span>
+      </div>
+      <div class="step-track">
+        <div class="fill-line" id="gkFillLine" style="width:0%"></div>
+        <div class="step-dot current" id="gkDot1">1</div>
+        <div class="step-dot" id="gkDot2">2</div>
+        <div class="step-dot" id="gkDot3">3</div>
+        <div class="step-dot" id="gkDot4">4</div>
+        <div class="step-dot" id="gkDot5">5</div>
+      </div>
+
+      <div class="gk-qcount" id="gkCount">Pergunta 1 de 5</div>
+      <div class="gk-question" id="gkQuestion">Vamos te conhecer. Em que fase do curso você está?</div>
+      <div id="gkOptions"></div>
+
+      <div class="gk-actions">
+        <button class="btn btn-ghost" id="gkBackBtn" onclick="gkPrev()" style="visibility:hidden;">Voltar</button>
+        <button class="btn btn-primary" id="gkNextBtn" onclick="gkNext()">Próximo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 4: HOME ============ -->
+<div class="screen" id="s-home">
+  <div class="app">
+    <div class="sidebar">
+      <div>
+        <div class="rocket-wordmark" style="color:#fff;"><svg class="rocket-icon" width="20" height="20"><use href="#rocket-svg"/></svg>Rocket</div>
+        <span class="rc-badge on-dark" style="margin-top:8px;">Comunidade RC</span>
+      </div>
+      <nav class="nav">
+        <a class="active" onclick="switchScreen('s-home')"><span class="ic">⌂</span> Home</a>
+        <a onclick="switchScreen('s-calendar')"><span class="ic">▦</span> Calendário</a>
+        <a onclick="switchScreen('s-metrics')"><span class="ic">▤</span> Métricas</a>
+        <a onclick="switchScreen('s-subjects')"><span class="ic">▥</span> Disciplinas</a>
+        <a onclick="switchScreen('s-timer')"><span class="ic">◷</span> Modo Foco</a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="streak-mini">🔥 <span>Sequência atual: <b>4 dias</b></span></div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <h1>Sua rotina</h1>
+        <div class="topbar-right">
+          <div class="icon-btn">🔔</div>
+          <div class="profile-chip">
+            <img id="homePhoto" src="https://api.dicebear.com/7.x/notionists/svg?seed=raissa&backgroundColor=f2a6c1" onerror="this.style.display='none'">
+            <div>
+              <div class="pname" id="homeName">Dra. Raissa</div>
+              <div class="prole">Medicina, ciclo clínico</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="grid cols-3">
+          <div class="hero-greet">
+            <div>
+              <span class="script">Bem-vinda de volta,</span>
+              <h2 id="heroName">Dra. Raissa</h2>
+              <div class="sub">Você já estudou 4 dias seguidos, sua melhor sequência até agora 👏</div>
+            </div>
+            <div class="today-pill">
+              <div class="tp-label">Prioridade de hoje</div>
+              <div class="tp-task">Revisão de insuficiência cardíaca</div>
+              <div class="tp-sub">Prevista pela sua curva de revisão, 25 min</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-card">
+          <div class="ic-emoji">💡</div>
+          <div>
+            <b>Ponto de atenção</b>
+            <span>Seu percentual de acerto em Cardiologia caiu para 61% nas últimas 2 semanas. Considere revisar antes da próxima prova.</span>
+          </div>
+        </div>
+
+        <div class="grid cols-3">
+          <div class="card">
+            <div class="eyebrow">Horas estudadas</div>
+            <div class="stat-num">38h</div>
+            <div class="stat-label">nos últimos 7 dias</div>
+          </div>
+          <div class="card">
+            <div class="eyebrow">Questões resolvidas</div>
+            <div class="stat-num">142</div>
+            <div class="stat-label">78% de acerto</div>
+          </div>
+          <div class="card-dark streak-card">
+            <div class="eyebrow">Constância</div>
+            <div class="flame">🔥</div>
+            <div class="num">4 dias</div>
+            <div class="week-dots">
+              <span class="done">S</span><span class="done">T</span><span class="done">Q</span><span class="done">Q</span><span>S</span><span>S</span><span>D</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid cols-2" style="margin-top:18px;">
+          <div class="card">
+            <h2 class="section-title">Tarefas de hoje</h2>
+            <div class="task-row">
+              <div class="task-dot revisao"></div>
+              <div class="t-info"><b>Insuficiência cardíaca</b><span>Revisão, Medicina interna</span></div>
+              <div class="t-time">09:00</div>
+            </div>
+            <div class="task-row">
+              <div class="task-dot contato"></div>
+              <div class="t-info"><b>Choque séptico</b><span>Primeiro contato, UTI</span></div>
+              <div class="t-time">14:30</div>
+            </div>
+            <div class="task-row">
+              <div class="task-dot prova"></div>
+              <div class="t-info"><b>Simulado, Bloco 2</b><span>Prova/Simulado</span></div>
+              <div class="t-time">19:00</div>
+            </div>
+          </div>
+          <div class="card">
+            <h2 class="section-title">Planejamento do mês</h2>
+            <p style="font-size:13.5px; color:var(--text-muted); line-height:1.5; margin-bottom:16px;">Agosto ainda não foi planejado. Reserve 5 minutos para definir metas e deixar sua rotina no automático.</p>
+            <button class="btn btn-primary btn-sm" onclick="switchScreen('s-calendar')">Planejar agosto</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 5: CALENDÁRIO ============ -->
+<div class="screen" id="s-calendar">
+  <div class="app">
+    <div class="sidebar">
+      <div>
+        <div class="rocket-wordmark" style="color:#fff;"><svg class="rocket-icon" width="20" height="20"><use href="#rocket-svg"/></svg>Rocket</div>
+        <span class="rc-badge on-dark" style="margin-top:8px;">Comunidade RC</span>
+      </div>
+      <nav class="nav">
+        <a onclick="switchScreen('s-home')"><span class="ic">⌂</span> Home</a>
+        <a class="active" onclick="switchScreen('s-calendar')"><span class="ic">▦</span> Calendário</a>
+        <a onclick="switchScreen('s-metrics')"><span class="ic">▤</span> Métricas</a>
+        <a onclick="switchScreen('s-subjects')"><span class="ic">▥</span> Disciplinas</a>
+        <a onclick="switchScreen('s-timer')"><span class="ic">◷</span> Modo Foco</a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="streak-mini">🔥 <span>Sequência atual: <b>4 dias</b></span></div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <h1>Calendário</h1>
+        <div class="topbar-right">
+          <div class="icon-btn">🔔</div>
+          <div class="profile-chip">
+            <img src="https://api.dicebear.com/7.x/notionists/svg?seed=raissa&backgroundColor=f2a6c1">
+            <div><div class="pname">Dra. Raissa</div><div class="prole">Medicina</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="ritual-banner">
+          <div class="rb-left">
+            <div class="rb-icon"><svg class="rocket-icon" width="20" height="20"><use href="#rocket-svg"/></svg></div>
+            <div>
+              <b>Ritual de planejamento mensal</b>
+              <span>Defina suas metas de agosto e deixe a rotina organizada automaticamente</span>
+            </div>
+          </div>
+          <button class="btn btn-pink btn-sm">Começar planejamento</button>
+        </div>
+
+        <div class="cal-toolbar">
+          <div class="cal-nav">
+            <button>‹</button>
+            <div class="cal-month">Agosto 2026</div>
+            <button>›</button>
+          </div>
+          <div class="legend">
+            <div class="li"><span class="dot" style="background:var(--green)"></span> Revisão</div>
+            <div class="li"><span class="dot" style="background:var(--wine)"></span> Prova/Simulado</div>
+            <div class="li"><span class="dot" style="background:var(--pink)"></span> Primeiro contato</div>
+            <div class="li"><span class="dot" style="background:var(--wine-deep)"></span> Planejamento</div>
+          </div>
+        </div>
+
+        <div class="cal-grid">
+          <div class="cal-weekdays">
+            <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div>
+          </div>
+          <div class="cal-days" id="calDays"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 6: DISCIPLINAS ============ -->
+<div class="screen" id="s-subjects">
+  <div class="app">
+    <div class="sidebar">
+      <div>
+        <div class="rocket-wordmark" style="color:#fff;"><svg class="rocket-icon" width="20" height="20"><use href="#rocket-svg"/></svg>Rocket</div>
+        <span class="rc-badge on-dark" style="margin-top:8px;">Comunidade RC</span>
+      </div>
+      <nav class="nav">
+        <a onclick="switchScreen('s-home')"><span class="ic">⌂</span> Home</a>
+        <a onclick="switchScreen('s-calendar')"><span class="ic">▦</span> Calendário</a>
+        <a onclick="switchScreen('s-metrics')"><span class="ic">▤</span> Métricas</a>
+        <a class="active" onclick="switchScreen('s-subjects')"><span class="ic">▥</span> Disciplinas</a>
+        <a onclick="switchScreen('s-timer')"><span class="ic">◷</span> Modo Foco</a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="streak-mini">🔥 <span>Sequência atual: <b>4 dias</b></span></div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="topbar">
+        <h1>Disciplinas</h1>
+        <div class="topbar-right">
+          <div class="icon-btn">🔔</div>
+          <div class="profile-chip">
+            <img src="https://api.dicebear.com/7.x/notionists/svg?seed=raissa&backgroundColor=f2a6c1">
+            <div><div class="pname">Dra. Raissa</div><div class="prole">Medicina</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+          <h2 class="section-title" style="margin:0;">Suas disciplinas</h2>
+          <button class="btn btn-primary btn-sm">Nova disciplina</button>
+        </div>
+
+        <div class="subject-row" onclick="switchScreen('s-subject-detail')" style="cursor:pointer;">
+          <div class="subject-icon">🫀</div>
+          <div class="subject-info"><b>Medicina interna</b><span>6 assuntos, última revisão há 2 dias</span></div>
+          <div class="subject-bar"><div class="bar-track"><div class="bar-fill" style="width:72%"></div></div><span>72% de cobertura</span></div>
+          <div class="subject-stats"><div><b>78%</b><span>ACERTOS</span></div><div><b>14h</b><span>ESTUDADAS</span></div></div>
+        </div>
+
+        <div class="subject-row">
+          <div class="subject-icon">🧠</div>
+          <div class="subject-info"><b>Neurologia</b><span>4 assuntos, última revisão há 6 dias</span></div>
+          <div class="subject-bar"><div class="bar-track"><div class="bar-fill" style="width:45%"></div></div><span>45% de cobertura</span></div>
+          <div class="subject-stats"><div><b>84%</b><span>ACERTOS</span></div><div><b>9h</b><span>ESTUDADAS</span></div></div>
+        </div>
+
+        <div class="subject-row">
+          <div class="subject-icon">🫁</div>
+          <div class="subject-info"><b>Pneumologia</b><span>8 assuntos, última revisão hoje</span></div>
+          <div class="subject-bar"><div class="bar-track"><div class="bar-fill" style="width:90%"></div></div><span>90% de cobertura</span></div>
+          <div class="subject-stats"><div><b>91%</b><span>ACERTOS</span></div><div><b>21h</b><span>ESTUDADAS</span></div></div>
+        </div>
+
+        <div class="subject-row">
+          <div class="subject-icon">⚠️</div>
+          <div class="subject-info"><b>Cardiologia</b><span>5 assuntos, última revisão há 11 dias</span></div>
+          <div class="subject-bar"><div class="bar-track"><div class="bar-fill" style="width:38%; background:linear-gradient(90deg, var(--amber), var(--wine));"></div></div><span>38% de cobertura</span></div>
+          <div class="subject-stats"><div><b style="color:var(--wine)">61%</b><span>ACERTOS</span></div><div><b>6h</b><span>ESTUDADAS</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 7: MÉTRICAS ============ -->
+<div class="screen" id="s-metrics">
+  <div class="app">
+    <div class="sidebar">
+      <div>
+        <div class="rocket-wordmark" style="color:#fff;"><svg class="rocket-icon" width="20" height="20"><use href="#rocket-svg"/></svg>Rocket</div>
+        <span class="rc-badge on-dark" style="margin-top:8px;">Comunidade RC</span>
+      </div>
+      <nav class="nav">
+        <a onclick="switchScreen('s-home')"><span class="ic">⌂</span> Home</a>
+        <a onclick="switchScreen('s-calendar')"><span class="ic">▦</span> Calendário</a>
+        <a class="active" onclick="switchScreen('s-metrics')"><span class="ic">▤</span> Métricas</a>
+        <a onclick="switchScreen('s-subjects')"><span class="ic">▥</span> Disciplinas</a>
+        <a onclick="switchScreen('s-timer')"><span class="ic">◷</span> Modo Foco</a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="streak-mini">🔥 <span>Sequência atual: <b>4 dias</b></span></div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="topbar">
+        <h1>Métricas</h1>
+        <div class="topbar-right">
+          <div class="icon-btn">🔔</div>
+          <div class="profile-chip">
+            <img src="https://api.dicebear.com/7.x/notionists/svg?seed=raissa&backgroundColor=f2a6c1">
+            <div><div class="pname">Dra. Raissa</div><div class="prole">Medicina</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="metric-tabs">
+          <button class="active">Semana</button>
+          <button>Mês</button>
+          <button>Desde o início</button>
+        </div>
+
+        <h2 class="section-title" style="margin-top:4px;">Flashcards</h2>
+        <div class="grid cols-3" style="margin-bottom:20px;">
+          <div class="card">
+            <div class="eyebrow">Revisados essa semana</div>
+            <div class="stat-num">86</div>
+            <div class="stat-label">flashcards, todas as disciplinas</div>
+          </div>
+          <div class="card">
+            <div class="eyebrow">Taxa de retenção</div>
+            <div class="stat-num" style="color:var(--green)">74%</div>
+            <div class="stat-label">lembrou fácil ou com esforço</div>
+          </div>
+          <div class="card-dark">
+            <div class="eyebrow">Revisões previstas hoje</div>
+            <div class="stat-num" style="color:var(--pink)">12</div>
+            <div class="stat-label" style="color:rgba(255,255,255,0.6)">calculado pela curva de revisão</div>
+          </div>
+        </div>
+
+        <div class="grid cols-2" style="margin-bottom:28px;">
+          <div class="card">
+            <h2 class="section-title">Flashcards revisados por dia</h2>
+            <div class="chart-placeholder">
+              <div class="bar" style="height:35%; background:linear-gradient(180deg, var(--pink), var(--wine-deep));"><span>9</span></div>
+              <div class="bar" style="height:60%; background:linear-gradient(180deg, var(--pink), var(--wine-deep));"><span>16</span></div>
+              <div class="bar" style="height:25%; background:linear-gradient(180deg, var(--pink), var(--wine-deep));"><span>7</span></div>
+              <div class="bar" style="height:85%; background:linear-gradient(180deg, var(--pink), var(--wine-deep));"><span>22</span></div>
+              <div class="bar" style="height:50%; background:linear-gradient(180deg, var(--pink), var(--wine-deep));"><span>14</span></div>
+              <div class="bar" style="height:40%; background:linear-gradient(180deg, var(--pink), var(--wine-deep));"><span>11</span></div>
+              <div class="bar" style="height:20%; background:linear-gradient(180deg, var(--pink), var(--wine-deep));"><span>7</span></div>
+            </div>
+            <div class="chart-x"><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span></div>
+          </div>
+
+          <div class="card">
+            <h2 class="section-title">Estágio dos seus cartões</h2>
+            <div class="weak-point low"><div class="wp-rank" style="color:var(--wine)">●</div><div class="wp-name">Novos</div><div class="wp-pct" style="color:var(--wine)">18</div></div>
+            <div class="weak-point mid"><div class="wp-rank" style="color:var(--amber)">●</div><div class="wp-name">Aprendendo</div><div class="wp-pct" style="color:var(--amber)">34</div></div>
+            <div class="weak-point high"><div class="wp-rank" style="color:var(--green)">●</div><div class="wp-name">Consolidados</div><div class="wp-pct" style="color:var(--green)">52</div></div>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:12px; line-height:1.5;">Consolidado significa que o Rocket já espaçou a revisão desse cartão para 30 dias ou mais, sinal de que esse conteúdo está firme na sua memória.</p>
+          </div>
+        </div>
+
+        <h2 class="section-title">Questões e simulados</h2>
+        <div class="grid cols-2">
+          <div class="card">
+            <h2 class="section-title">Horas líquidas de estudo</h2>
+            <div class="chart-placeholder">
+              <div class="bar" style="height:40%"><span>3h</span></div>
+              <div class="bar" style="height:65%"><span>5h</span></div>
+              <div class="bar" style="height:30%"><span>2h</span></div>
+              <div class="bar" style="height:80%"><span>6h</span></div>
+              <div class="bar" style="height:55%"><span>4h</span></div>
+              <div class="bar" style="height:20%"><span>1h</span></div>
+              <div class="bar" style="height:0%; background:var(--ice-dim);"><span>0h</span></div>
+            </div>
+            <div class="chart-x"><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span></div>
+          </div>
+
+          <div class="card">
+            <h2 class="section-title">Onde focar essa semana</h2>
+            <div class="weak-point low"><div class="wp-rank">01</div><div class="wp-name">Cardiologia</div><div class="wp-pct">61%</div></div>
+            <div class="weak-point mid"><div class="wp-rank">02</div><div class="wp-name">Medicina interna</div><div class="wp-pct">78%</div></div>
+            <div class="weak-point mid"><div class="wp-rank">03</div><div class="wp-name">Neurologia</div><div class="wp-pct">84%</div></div>
+            <div class="weak-point high"><div class="wp-rank">04</div><div class="wp-name">Pneumologia</div><div class="wp-pct">91%</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 8: MODO FOCO ============ -->
+<div class="screen" id="s-timer">
+  <div class="focus-screen">
+    <div class="focus-back" onclick="switchScreen('s-home')">‹</div>
+    <select class="focus-tag-select">
+      <option>Cardiologia, Insuficiência cardíaca</option>
+    </select>
+    <div class="timer-ring">
+      <div class="tr-label">Tempo de foco</div>
+      <div class="tr-cycle">Ciclo 1/4</div>
+      <div class="tr-time">25:00</div>
+    </div>
+    <div class="focus-goal">
+      <b>Meta do dia</b>
+      <span style="font-family:var(--font-mono); font-size:13px;">0h 40m / 2h 00m</span>
+      <div class="fg-track"><div class="fg-fill"></div></div>
+    </div>
+    <div class="focus-controls">
+      <button class="fc-btn secondary">↻</button>
+      <button class="fc-btn play">▶</button>
+      <button class="fc-btn secondary">■</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 9: ASSUNTO + FLASHCARDS ============ -->
+<div class="screen" id="s-subject-detail">
+  <div class="app">
+    <div class="sidebar">
+      <div>
+        <div class="rocket-wordmark" style="color:#fff;"><svg class="rocket-icon" width="20" height="20"><use href="#rocket-svg"/></svg>Rocket</div>
+        <span class="rc-badge on-dark" style="margin-top:8px;">Comunidade RC</span>
+      </div>
+      <nav class="nav">
+        <a onclick="switchScreen('s-home')"><span class="ic">⌂</span> Home</a>
+        <a onclick="switchScreen('s-calendar')"><span class="ic">▦</span> Calendário</a>
+        <a onclick="switchScreen('s-metrics')"><span class="ic">▤</span> Métricas</a>
+        <a class="active" onclick="switchScreen('s-subjects')"><span class="ic">▥</span> Disciplinas</a>
+        <a onclick="switchScreen('s-timer')"><span class="ic">◷</span> Modo Foco</a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="streak-mini">🔥 <span>Sequência atual: <b>4 dias</b></span></div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="icon-btn" onclick="switchScreen('s-subjects')" style="cursor:pointer;">‹</div>
+          <h1>Insuficiência cardíaca</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="icon-btn">🔔</div>
+          <div class="profile-chip">
+            <img src="https://api.dicebear.com/7.x/notionists/svg?seed=raissa&backgroundColor=f2a6c1">
+            <div><div class="pname">Dra. Raissa</div><div class="prole">Medicina interna</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="sd-tabs">
+          <button class="active">Flashcards</button>
+          <button>Questões e simulados</button>
+        </div>
+
+        <div class="sd-summary">
+          <div class="sd-sum-item"><span>Flashcards</span><b id="sdCardCount">6</b></div>
+          <div class="sd-sum-item"><span>Consolidados</span><b style="color:var(--green)">2</b></div>
+          <div class="sd-sum-item"><span>Aprendendo</span><b style="color:var(--amber)">3</b></div>
+          <div class="sd-sum-item"><span>Novos</span><b style="color:var(--wine)">1</b></div>
+          <div class="sd-sum-item sd-next"><span>Próxima revisão prevista</span><b>Hoje, 3 cartões</b></div>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-bottom:20px;">
+          <button class="btn btn-primary" onclick="startReview()">Iniciar revisão de hoje</button>
+          <button class="btn btn-ghost" onclick="switchScreen('s-flashcard-new')">Novo flashcard</button>
+        </div>
+
+        <div class="fc-list" id="fcList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 10: NOVO FLASHCARD ============ -->
+<div class="screen" id="s-flashcard-new">
+  <div class="fc-form-wrap">
+    <div class="fc-form-box">
+      <div class="fc-form-top">
+        <div class="icon-btn" onclick="switchScreen('s-subject-detail')" style="cursor:pointer;">‹</div>
+        <div>
+          <div class="step">Novo flashcard</div>
+          <h2>Insuficiência cardíaca</h2>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Frente do cartão</label>
+        <textarea id="fcFront" rows="3" placeholder="Escreva a pergunta ou o estímulo que você quer lembrar"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Verso do cartão</label>
+        <textarea id="fcBack" rows="3" placeholder="Escreva a resposta completa"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Imagem (opcional)</label>
+        <div class="fc-image-upload" id="fcImageTrigger">
+          <img id="fcImagePreview" style="display:none;">
+          <div id="fcImagePlaceholder">
+            <span style="font-size:22px;">🖼️</span>
+            <span style="display:block; font-size:12.5px; margin-top:6px; color:var(--text-muted); font-weight:700;">Clique para adicionar uma imagem, um ECG, uma radiografia, o que ajudar você a lembrar</span>
+          </div>
+        </div>
+        <input type="file" id="fcImageInput" accept="image/*" style="display:none;">
+      </div>
+
+      <button class="btn btn-primary btn-block" onclick="switchScreen('s-subject-detail')">Salvar flashcard</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 11: SESSÃO DE REVISÃO ============ -->
+<div class="screen" id="s-flashcard-review">
+  <div class="review-screen">
+    <div class="review-top">
+      <div class="review-back" onclick="switchScreen('s-subject-detail')">‹</div>
+      <div class="review-progress-wrap">
+        <div class="review-progress-track"><div class="review-progress-fill" id="reviewProgressFill"></div></div>
+        <span id="reviewProgressLabel">Cartão 1 de 3</span>
+      </div>
+      <div style="width:38px;"></div>
+    </div>
+
+    <div class="review-card-area">
+      <div class="flip-card" id="flipCard" onclick="flipCard()">
+        <div class="flip-inner" id="flipInner">
+          <div class="flip-face flip-front">
+            <div class="fc-eyebrow">Frente</div>
+            <div class="fc-question" id="cardFrontText">Quais são os principais sinais de congestão pulmonar na insuficiência cardíaca?</div>
+            <div class="fc-tap-hint">Toque para virar</div>
+          </div>
+          <div class="flip-face flip-back">
+            <div class="fc-eyebrow">Verso</div>
+            <div class="fc-answer" id="cardBackText">Dispneia, ortopneia, estertores crepitantes em bases pulmonares e, em casos mais graves, edema agudo de pulmão.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="review-grading" id="reviewGrading" style="visibility:hidden;">
+      <div class="rg-label">Você lembrou desse cartão?</div>
+      <div class="rg-buttons">
+        <button class="rg-btn rg-fail" onclick="gradeCard(0)">Não lembrei<span>revisa amanhã</span></button>
+        <button class="rg-btn rg-hard" onclick="gradeCard(1)">Com esforço<span>revisa em poucos dias</span></button>
+        <button class="rg-btn rg-easy" onclick="gradeCard(2)">Lembrei fácil<span>revisa em mais tempo</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN 12: RESUMO DA SESSÃO ============ -->
+<div class="screen" id="s-flashcard-summary">
+  <div class="summary-screen">
+    <div class="summary-box">
+      <div class="summary-icon">✦</div>
+      <h2>Sessão concluída</h2>
+      <p class="summary-sub">Isso fica separado das suas questões de simulado, para você acompanhar cada frente com clareza.</p>
+
+      <div class="summary-stats">
+        <div class="ss-item"><b id="ssTotal">3</b><span>flashcards revisados</span></div>
+        <div class="ss-item"><b id="ssRetention" style="color:var(--green)">67%</b><span>taxa de retenção</span></div>
+      </div>
+
+      <div class="summary-next">
+        <div class="sn-icon"><svg class="rocket-icon" width="14" height="14"><use href="#rocket-svg"/></svg></div>
+        <div>
+          <b>Próxima revisão calculada automaticamente</b>
+          <span id="ssNextInfo">2 cartões amanhã, 1 cartão em 7 dias</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block" onclick="switchScreen('s-subject-detail')">Voltar para o assunto</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="switchScreen('s-metrics')">Ver nas métricas</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* app shell (reused across home/calendar/subjects/metrics) */
+  .app{ display:grid; grid-template-columns: 250px 1fr; min-height: 100vh; }
+  .sidebar{ background: var(--wine-deep); padding: 28px 20px; display:flex; flex-direction:column; gap: 34px; }
+  .nav{ display:flex; flex-direction:column; gap:4px; }
+  .nav a{ display:flex; align-items:center; gap:12px; padding: 11px 14px; border-radius: var(--radius-sm); color: rgba(255,255,255,0.68); text-decoration:none; font-weight: 700; font-size: 14.5px; transition: all .15s ease; cursor:pointer; }
+  .nav a:hover{ background: rgba(255,255,255,0.06); color:#fff; }
+  .nav a.active{ background: var(--pink); color: var(--wine-deep); }
+  .nav a .ic{ width:18px; text-align:center; font-size:15px; }
+  .sidebar-foot{ margin-top:auto; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.1); }
+  .streak-mini{ background: rgba(255,255,255,0.06); border-radius: var(--radius-sm); padding: 12px; color: rgba(255,255,255,0.85); font-size: 12.5px; display:flex; align-items:center; gap:8px; }
+  .streak-mini b{ font-family: var(--font-mono); color: var(--pink); }
+  .main{ padding: 0; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding: 20px 34px; background: var(--white); border-bottom: 1px solid var(--line); }
+  .topbar h1{ font-family: var(--font-display); font-weight: 600; font-size: 22px; }
+  .topbar-right{ display:flex; align-items:center; gap:18px; }
+  .icon-btn{ width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; background: var(--ice); color: var(--text-muted); cursor:pointer; font-size:15px; }
+  .profile-chip{ display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .profile-chip img{ width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid var(--pink); }
+  .profile-chip .pname{ font-weight:800; font-size:14px; line-height:1.2; }
+  .profile-chip .prole{ font-size:12px; color: var(--text-muted); }
+  .content{ padding: 30px 34px 60px; }
+  .grid{ display:grid; gap: 18px; }
+  .cols-3{ grid-template-columns: repeat(3, 1fr); }
+  .cols-2{ grid-template-columns: 1.4fr 1fr; }
+  .card{ background: var(--white); border-radius: var(--radius-lg); padding: 22px; box-shadow: var(--shadow); }
+  .card-dark{ background: var(--coal); color: var(--white); border-radius: var(--radius-lg); padding: 22px; box-shadow: var(--shadow); }
+  .eyebrow{ font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+  .card-dark .eyebrow{ color: rgba(255,255,255,0.5); }
+  .stat-num{ font-family: var(--font-mono); font-weight: 600; font-size: 32px; margin-top: 8px; letter-spacing: -0.01em; }
+  .stat-label{ font-size: 13.5px; color: var(--text-muted); margin-top:2px; font-weight:700; }
+  .card-dark .stat-label{ color: rgba(255,255,255,0.6); }
+  .hero-greet{ grid-column: 1/-1; background: linear-gradient(120deg, var(--wine-deep), var(--wine)); color:#fff; border-radius: var(--radius-lg); padding: 26px 28px; display:flex; align-items:center; justify-content:space-between; margin-bottom: 20px; }
+  .hero-greet .script{ font-family: var(--font-script); font-size: 22px; color: var(--pink); display:block; margin-bottom: 2px; }
+  .hero-greet h2{ font-family: var(--font-display); font-weight:600; font-size: 24px; }
+  .hero-greet .sub{ font-size: 13.5px; color: rgba(255,255,255,0.75); margin-top:4px; }
+  .today-pill{ background: rgba(255,255,255,0.12); border-radius: var(--radius-md); padding: 14px 18px; min-width: 220px; }
+  .today-pill .tp-label{ font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color: var(--pink); font-weight:800; font-family: var(--font-mono);}
+  .today-pill .tp-task{ font-weight:800; margin-top:6px; font-size:14.5px; }
+  .today-pill .tp-sub{ font-size:12.5px; color: rgba(255,255,255,0.7); margin-top:2px; }
+  .insight-card{ background: var(--pink-soft); border: 1px solid #F5C7DA; border-radius: var(--radius-lg); padding: 18px 20px; display:flex; align-items:flex-start; gap:14px; margin-bottom:20px; }
+  .insight-card .ic-emoji{ font-size:22px; }
+  .insight-card b{ display:block; font-size:14.5px; margin-bottom:2px; color: var(--wine-deep); }
+  .insight-card span{ font-size:13.5px; color: var(--text); }
+  .task-row{ display:flex; align-items:center; gap:14px; padding: 13px 4px; border-bottom: 1px solid var(--line); }
+  .task-row:last-child{ border-bottom:none; }
+  .task-dot{ width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .task-dot.revisao{ background: var(--green); }
+  .task-dot.prova{ background: var(--wine); }
+  .task-dot.contato{ background: var(--pink); }
+  .task-row .t-info b{ font-size:14px; display:block; }
+  .task-row .t-info span{ font-size:12.5px; color: var(--text-muted); }
+  .task-row .t-time{ margin-left:auto; font-family: var(--font-mono); font-size:12.5px; color: var(--text-muted); }
+  .streak-card{ text-align:center; }
+  .streak-card .flame{ font-size:34px; }
+  .streak-card .num{ font-family: var(--font-mono); font-weight:600; font-size: 30px; color: var(--pink); margin-top:4px; }
+  .week-dots{ display:flex; justify-content:center; gap:7px; margin-top:14px; }
+  .week-dots span{ width:26px; height:26px; border-radius:8px; background: rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:10px; color:rgba(255,255,255,0.4); font-family:var(--font-mono); }
+  .week-dots span.done{ background: var(--pink); color: var(--wine-deep); font-weight:700; }
+  .cal-toolbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .cal-nav{ display:flex; align-items:center; gap:16px; }
+  .cal-nav button{ background: var(--white); border:1px solid var(--line); width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:14px; }
+  .cal-month{ font-family: var(--font-display); font-weight:600; font-size: 20px; }
+  .legend{ display:flex; gap:16px; align-items:center; }
+  .legend .li{ display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color: var(--text-muted); }
+  .legend .dot{ width:9px; height:9px; border-radius:50%; }
+  .ritual-banner{ background: var(--coal); color:#fff; border-radius: var(--radius-lg); padding: 20px 24px; display:flex; align-items:center; justify-content:space-between; margin-bottom: 20px; }
+  .ritual-banner .rb-left{ display:flex; align-items:center; gap:16px; }
+  .ritual-banner .rb-icon{ width:46px; height:46px; border-radius:14px; background: var(--pink); color: var(--wine-deep); display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .ritual-banner b{ font-family: var(--font-display); font-weight:600; font-size:17px; display:block; }
+  .ritual-banner span{ font-size:13px; color: rgba(255,255,255,0.65); }
+  .cal-grid{ background: var(--white); border-radius: var(--radius-lg); overflow:hidden; box-shadow: var(--shadow); }
+  .cal-weekdays{ display:grid; grid-template-columns: repeat(7,1fr); background: var(--ice); }
+  .cal-weekdays div{ padding: 12px; text-align:center; font-size:12px; font-weight:800; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; }
+  .cal-days{ display:grid; grid-template-columns: repeat(7,1fr); }
+  .cal-cell{ min-height: 96px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 8px; position:relative; }
+  .cal-cell:nth-child(7n){ border-right:none; }
+  .cal-cell .dnum{ font-family: var(--font-mono); font-size:12.5px; color: var(--text-muted); font-weight:600; }
+  .cal-cell.today .dnum{ background: var(--wine); color:#fff; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .cal-cell.empty{ background: repeating-linear-gradient(135deg, transparent, transparent 8px, rgba(0,0,0,0.015) 8px, rgba(0,0,0,0.015) 9px); }
+  .cal-tag{ margin-top: 5px; font-size: 10.5px; font-weight: 800; padding: 3px 6px; border-radius: 5px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cal-tag.revisao{ background: var(--green); }
+  .cal-tag.prova{ background: var(--wine); }
+  .cal-tag.contato{ background: var(--pink); color: var(--wine-deep); }
+  .cal-cell.ritual-day{ background: var(--pink-soft); }
+  .cal-cell.ritual-day .dnum{ color: var(--wine-deep); }
+  .ritual-star{ position:absolute; top:8px; right:8px; font-size:13px; color: var(--wine); }
+  .subject-row{ display:flex; align-items:center; gap:18px; padding: 18px; background: var(--white); border-radius: var(--radius-md); margin-bottom: 12px; box-shadow: var(--shadow); }
+  .subject-icon{ width:44px; height:44px; border-radius: 12px; background: var(--pink-soft); color: var(--wine-deep); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .subject-info{ flex:1; }
+  .subject-info b{ font-size:15px; display:block; }
+  .subject-info span{ font-size:12.5px; color: var(--text-muted); }
+  .subject-bar{ width:160px; }
+  .subject-bar .bar-track{ height:7px; background: var(--ice-dim); border-radius:99px; overflow:hidden; margin-bottom:5px; }
+  .subject-bar .bar-fill{ height:100%; background: linear-gradient(90deg, var(--wine), var(--pink)); border-radius:99px; }
+  .subject-bar span{ font-family: var(--font-mono); font-size:11.5px; color: var(--text-muted); }
+  .subject-stats{ display:flex; gap:22px; text-align:right; }
+  .subject-stats div b{ display:block; font-family: var(--font-mono); font-size:16px; }
+  .subject-stats div span{ font-size:11px; color: var(--text-muted); font-weight:700; }
+  .metric-tabs{ display:flex; gap:8px; margin-bottom:20px; }
+  .metric-tabs button{ font-family: var(--font-body); font-weight:800; font-size:13px; background: var(--white); border:1px solid var(--line); padding: 9px 18px; border-radius:999px; cursor:pointer; color: var(--text-muted); }
+  .metric-tabs button.active{ background: var(--wine); border-color: var(--wine); color:#fff; }
+  .chart-placeholder{ height: 220px; display:flex; align-items:flex-end; gap:10px; padding: 10px 4px; }
+  .chart-placeholder .bar{ flex:1; background: linear-gradient(180deg, var(--pink), var(--wine)); border-radius: 6px 6px 0 0; position:relative; }
+  .chart-placeholder .bar span{ position:absolute; top:-20px; left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:10.5px; color:var(--text-muted); }
+  .chart-x{ display:flex; gap:10px; padding: 0 4px; margin-top:6px; }
+  .chart-x span{ flex:1; text-align:center; font-size:11px; color:var(--text-muted); font-family:var(--font-mono); }
+  .weak-point{ display:flex; align-items:center; gap:14px; padding: 14px 16px; border-radius: var(--radius-sm); background: var(--ice); margin-bottom:10px; }
+  .weak-point .wp-rank{ font-family: var(--font-mono); font-weight:700; color: var(--text-muted); font-size:13px; width:20px; }
+  .weak-point .wp-name{ font-weight:800; font-size:14px; flex:1; }
+  .weak-point .wp-pct{ font-family: var(--font-mono); font-weight:600; font-size:15px; }
+  .weak-point.low .wp-pct{ color: var(--wine); }
+  .weak-point.mid .wp-pct{ color: var(--amber); }
+  .weak-point.high .wp-pct{ color: var(--green); }
+  .focus-screen{ min-height: 100vh; background: var(--wine-deep); background-image: radial-gradient(circle at 15% 15%, rgba(242,166,193,0.12), transparent 35%), radial-gradient(circle at 85% 85%, rgba(242,166,193,0.10), transparent 40%); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; padding: 40px; position:relative; }
+  .focus-back{ position:absolute; top:26px; left:26px; width:38px; height:38px; border-radius:50%; background: rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; cursor:pointer; color:#fff; }
+  .focus-tag-select{ background: rgba(255,255,255,0.1); border: none; color:#fff; padding: 8px 16px; border-radius:999px; font-family: var(--font-body); font-weight:700; font-size:13px; margin-bottom: 30px; }
+  .timer-ring{ width: 260px; height:260px; border-radius:50%; border: 3px solid rgba(255,255,255,0.18); display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; }
+  .timer-ring::before{ content:""; position:absolute; inset:-3px; border-radius:50%; border: 3px solid var(--pink); clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 50% 100%); }
+  .timer-ring .tr-label{ font-size:12px; color: rgba(255,255,255,0.6); text-transform:uppercase; letter-spacing:0.08em; font-weight:700; }
+  .timer-ring .tr-cycle{ font-size:12px; color: var(--pink); margin-top:4px; font-weight:700; }
+  .timer-ring .tr-time{ font-family: var(--font-mono); font-weight:600; font-size: 52px; margin-top:6px; }
+  .focus-goal{ background: rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: 16px 22px; margin-top: 34px; text-align:center; min-width: 260px; }
+  .focus-goal b{ font-size:13px; display:block; margin-bottom:6px; }
+  .focus-goal .fg-track{ height:6px; background: rgba(255,255,255,0.15); border-radius:99px; margin: 8px 0; overflow:hidden; }
+  .focus-goal .fg-fill{ height:100%; width:32%; background: var(--pink); }
+  .focus-controls{ display:flex; gap:16px; margin-top: 30px; }
+  .fc-btn{ width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; font-size:18px; }
+  .fc-btn.play{ background:#fff; color: var(--wine-deep); width:64px; height:64px; font-size:22px; }
+  .fc-btn.secondary{ background: rgba(255,255,255,0.12); color:#fff; }
+  @media (max-width: 900px){ .app{ grid-template-columns: 1fr; } .sidebar{ display:none; } .cols-3, .cols-2{ grid-template-columns: 1fr; } }
+
+  /* ---------- flashcards: subject detail ---------- */
+  .sd-tabs{ display:flex; gap:8px; margin-bottom:20px; }
+  .sd-tabs button{ font-family: var(--font-body); font-weight:800; font-size:13px; background: var(--white); border:1px solid var(--line); padding: 9px 18px; border-radius:999px; cursor:pointer; color: var(--text-muted); }
+  .sd-tabs button.active{ background: var(--wine); border-color: var(--wine); color:#fff; }
+  .sd-summary{ display:flex; gap:0; background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow); margin-bottom:20px; overflow:hidden; }
+  .sd-sum-item{ flex:1; padding: 16px 18px; border-right:1px solid var(--line); }
+  .sd-sum-item:last-child{ border-right:none; }
+  .sd-sum-item span{ display:block; font-size:11px; color: var(--text-muted); font-weight:800; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:5px; }
+  .sd-sum-item b{ font-family: var(--font-mono); font-size:20px; font-weight:600; }
+  .sd-next{ background: var(--pink-soft); flex:1.5; }
+  .sd-next b{ font-size:14px; color: var(--wine-deep); font-family: var(--font-body); font-weight:800; }
+
+  .fc-list{ display:flex; flex-direction:column; gap:10px; }
+  .fc-row{ display:flex; align-items:center; gap:14px; background: var(--white); border-radius: var(--radius-md); padding:14px 16px; box-shadow: var(--shadow); }
+  .fc-thumb{ width:46px; height:46px; border-radius:8px; background: var(--ice); flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center; color: var(--text-muted); font-size:16px; }
+  .fc-thumb img{ width:100%; height:100%; object-fit:cover; }
+  .fc-row-body{ flex:1; min-width:0; }
+  .fc-row-body b{ font-size:13.5px; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fc-row-body span{ font-size:12px; color: var(--text-muted); }
+  .fc-stage{ font-family: var(--font-mono); font-size:10.5px; font-weight:700; padding:4px 10px; border-radius:999px; white-space:nowrap; }
+  .fc-stage.novo{ background: #FBE3EC; color: var(--wine); }
+  .fc-stage.aprendendo{ background: #FBF0DC; color: var(--amber); }
+  .fc-stage.consolidado{ background: #E3F0EA; color: var(--green); }
+
+  /* ---------- flashcard creation form ---------- */
+  .fc-form-wrap{ min-height:100vh; background: var(--ice); display:flex; align-items:center; justify-content:center; padding:40px; }
+  .fc-form-box{ width:100%; max-width:520px; background:var(--white); border-radius: var(--radius-lg); padding:36px 40px; box-shadow: var(--shadow-lift); }
+  .fc-form-top{ display:flex; align-items:center; gap:14px; margin-bottom:26px; }
+  .fc-form-top h2{ font-family: var(--font-display); font-weight:600; font-size:21px; margin-top:2px; }
+  .field textarea{ width:100%; padding:13px 15px; border-radius: var(--radius-sm); border:1.5px solid var(--line); font-family: var(--font-body); font-size:14px; font-weight:600; color: var(--text); resize:vertical; }
+  .field textarea:focus{ outline:none; border-color: var(--wine); }
+  .fc-image-upload{ border:1.5px dashed var(--line); border-radius: var(--radius-md); padding:22px; text-align:center; cursor:pointer; background: var(--ice); }
+  .fc-image-upload img{ max-width:100%; max-height:160px; border-radius:8px; }
+
+  /* ---------- review session ---------- */
+  .review-screen{ min-height:100vh; background: var(--wine-deep); background-image: radial-gradient(circle at 15% 15%, rgba(242,166,193,0.10), transparent 35%), radial-gradient(circle at 85% 85%, rgba(242,166,193,0.10), transparent 40%); display:flex; flex-direction:column; padding: 26px 30px 40px; color:#fff; }
+  .review-top{ display:flex; align-items:center; gap:18px; }
+  .review-back{ width:38px; height:38px; border-radius:50%; background: rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+  .review-progress-wrap{ flex:1; text-align:center; }
+  .review-progress-track{ height:5px; background: rgba(255,255,255,0.15); border-radius:99px; overflow:hidden; max-width:360px; margin:0 auto 8px; }
+  .review-progress-fill{ height:100%; width:0%; background: var(--pink); transition: width .3s ease; }
+  .review-progress-wrap span{ font-family: var(--font-mono); font-size:11.5px; color: rgba(255,255,255,0.6); }
+  .review-card-area{ flex:1; display:flex; align-items:center; justify-content:center; padding: 30px 0; perspective: 1400px; }
+  .flip-card{ width:100%; max-width:460px; height:280px; cursor:pointer; }
+  .flip-inner{ position:relative; width:100%; height:100%; transition: transform .5s; transform-style: preserve-3d; }
+  .flip-inner.flipped{ transform: rotateY(180deg); }
+  .flip-face{ position:absolute; inset:0; backface-visibility:hidden; background:#fff; color: var(--text); border-radius: var(--radius-lg); box-shadow: var(--shadow-lift); padding:30px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  .flip-back{ transform: rotateY(180deg); background: var(--coal); color:#fff; }
+  .fc-eyebrow{ font-family: var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color: var(--text-muted); position:absolute; top:20px; left:24px; }
+  .flip-back .fc-eyebrow{ color: rgba(255,255,255,0.5); }
+  .fc-question{ font-family: var(--font-display); font-weight:600; font-size:19px; line-height:1.5; }
+  .fc-answer{ font-size:15px; line-height:1.6; font-weight:600; }
+  .fc-tap-hint{ position:absolute; bottom:18px; font-family: var(--font-mono); font-size:10.5px; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+
+  .review-grading{ text-align:center; }
+  .rg-label{ font-size:13px; color: rgba(255,255,255,0.65); margin-bottom:14px; font-weight:700; }
+  .rg-buttons{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  .rg-btn{ font-family: var(--font-body); font-weight:800; font-size:13.5px; border:none; cursor:pointer; padding:14px 22px; border-radius: var(--radius-md); display:flex; flex-direction:column; align-items:center; gap:4px; min-width:150px; }
+  .rg-btn span{ font-size:11px; font-weight:600; opacity:0.85; }
+  .rg-fail{ background: var(--wine-bright); color:#fff; }
+  .rg-hard{ background: var(--amber); color:#fff; }
+  .rg-easy{ background: var(--green); color:#fff; }
+
+  /* ---------- session summary ---------- */
+  .summary-screen{ min-height:100vh; background: var(--ice); display:flex; align-items:center; justify-content:center; padding:40px; }
+  .summary-box{ width:100%; max-width:440px; background:var(--white); border-radius: var(--radius-lg); padding:44px 40px; box-shadow: var(--shadow-lift); text-align:center; }
+  .summary-icon{ width:52px; height:52px; border-radius:50%; background: var(--pink-soft); color: var(--wine); display:flex; align-items:center; justify-content:center; font-size:22px; margin:0 auto 18px; }
+  .summary-box h2{ font-family: var(--font-display); font-weight:600; font-size:23px; }
+  .summary-sub{ font-size:13px; color: var(--text-muted); margin-top:8px; line-height:1.5; }
+  .summary-stats{ display:flex; gap:12px; margin:26px 0; }
+  .ss-item{ flex:1; background: var(--ice); border-radius: var(--radius-md); padding:16px; }
+  .ss-item b{ display:block; font-family: var(--font-mono); font-size:24px; font-weight:600; }
+  .ss-item span{ font-size:11px; color: var(--text-muted); font-weight:700; }
+  .summary-next{ display:flex; align-items:center; gap:12px; background: var(--pink-soft); border-radius: var(--radius-md); padding:14px 16px; text-align:left; margin-bottom:22px; }
+  .summary-next .sn-icon{ width:30px; height:30px; border-radius:8px; background: var(--wine); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .summary-next b{ display:block; font-size:12.5px; }
+  .summary-next span{ font-size:12px; color: var(--text-muted); }
+</style>
+
+<script>
+function switchScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.proto-tab').forEach(t=>t.classList.remove('active'));
+  const btn = document.querySelector('.proto-tab[data-screen="'+id+'"]');
+  if(btn) btn.classList.add('active');
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.proto-tab').forEach(t=>{
+  t.addEventListener('click', ()=> switchScreen(t.dataset.screen));
+});
+
+/* ---------- AUTH TABS ---------- */
+function setAuthTab(tab){
+  const isSignup = tab === 'signup';
+  document.getElementById('tabSignup').classList.toggle('active', isSignup);
+  document.getElementById('tabLogin').classList.toggle('active', !isSignup);
+  document.getElementById('formSignup').style.display = isSignup ? 'block' : 'none';
+  document.getElementById('formLogin').style.display = isSignup ? 'none' : 'block';
+  document.getElementById('authSwitchText').innerHTML = isSignup
+    ? `Já tem uma conta? <b onclick="setAuthTab('login')">Entrar</b>`
+    : `Ainda não tem conta? <b onclick="setAuthTab('signup')">Criar conta</b>`;
+}
+
+/* ---------- PHOTO UPLOAD + TITLE LOGIC (personalize screen) ---------- */
+document.getElementById('photoTrigger').addEventListener('click', ()=> document.getElementById('photoInput').click());
+document.getElementById('photoInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      document.getElementById('photoPreview').src = ev.target.result;
+      document.getElementById('photoPreview').style.display = 'block';
+      document.getElementById('photoIcon').style.display = 'none';
+      document.getElementById('homePhoto').src = ev.target.result;
+      document.getElementById('pvPhoto').innerHTML = '<img src="'+ev.target.result+'">';
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+const titleMap = {
+  medicina: { a: 'Dra.', o: 'Dr.', x: 'Dr(a).', label:'Medicina' },
+  enfermagem: { a: 'Enfermeira', o: 'Enfermeiro', x: 'Enfermeire', label:'Enfermagem' },
+  psicologia: { a: 'Psicóloga', o: 'Psicólogo', x: 'Psicólogue', label:'Psicologia' },
+  odontologia: { a: 'Dra.', o: 'Dr.', x: 'Dr(a).', label:'Odontologia' },
+  fisioterapia: { a: 'Fisioterapeuta', o: 'Fisioterapeuta', x: 'Fisioterapeuta', label:'Fisioterapia' },
+  outra: { a: 'Estudante', o: 'Estudante', x: 'Estudante', label:'Área da saúde' }
+};
+function updatePreview(){
+  const name = document.getElementById('inputName').value.trim().split(' ')[0] || 'Você';
+  const area = document.getElementById('inputArea').value;
+  const gender = document.getElementById('inputGender').value;
+  const info = titleMap[area];
+  const full = info[gender] + ' ' + name;
+  document.getElementById('titlePreview').innerHTML = 'Você será chamada de <b>' + full + '</b> em toda a plataforma.';
+  document.getElementById('heroName').textContent = full;
+  document.getElementById('homeName').textContent = full;
+  document.getElementById('pvName').textContent = full;
+  document.getElementById('pvHeroName').textContent = full;
+  document.getElementById('pvRole').textContent = info.label;
+}
+updatePreview();
+
+/* ---------- VAMOS TE CONHECER STEPPER ---------- */
+const gkQuestions = [
+  { q:'Vamos te conhecer. Em que fase do curso você está?', opts:[
+      {icon:'📘', t:'Ciclo básico', s:'Ainda nas disciplinas iniciais'},
+      {icon:'🩺', t:'Ciclo clínico', s:'Já em contato com casos reais'},
+      {icon:'🏥', t:'Internato', s:'Vivendo a rotina do hospital'},
+      {icon:'🎓', t:'Já formada, revisando para prova', s:'Residência ou concurso'}
+  ]},
+  { q:'Qual é o seu maior desafio ao estudar hoje?', opts:[
+      {icon:'⏱️', t:'Organizar o tempo', s:'Sobra pouco tempo no dia'},
+      {icon:'🧩', t:'Entender a lógica dos casos', s:'Raciocínio clínico na prática'},
+      {icon:'🔁', t:'Manter a constância', s:'Começar bem e não sustentar'},
+      {icon:'🧠', t:'Memorizar o conteúdo', s:'Fica difícil reter depois de um tempo'}
+  ]},
+  { q:'Você tem uma prova ou objetivo definido?', opts:[
+      {icon:'🎯', t:'Sim, residência médica', s:'Já tenho uma data em mente'},
+      {icon:'📝', t:'Sim, prova da faculdade', s:'Avaliação de módulo ou estágio'},
+      {icon:'🌱', t:'Ainda não, quero rotina diária', s:'Foco em consistência por enquanto'}
+  ]},
+  { q:'Quantas horas por semana você consegue dedicar aos estudos?', opts:[
+      {icon:'🕐', t:'Até 5 horas', s:'Rotina apertada'},
+      {icon:'🕓', t:'De 5 a 10 horas', s:'Consigo intercalar bem'},
+      {icon:'🕗', t:'De 10 a 20 horas', s:'Boa parte da semana dedicada'},
+      {icon:'🕛', t:'Mais de 20 horas', s:'Estudo é prioridade central agora'}
+  ]},
+  { q:'Como você prefere estudar na maior parte do tempo?', opts:[
+      {icon:'🙋‍♀️', t:'Sozinha', s:'No meu próprio ritmo'},
+      {icon:'👥', t:'Em grupo', s:'Discutindo casos com colegas'},
+      {icon:'🔀', t:'Alternando entre os dois', s:'Depende do assunto e da semana'}
+  ]}
+];
+let gkStep = 0;
+const gkAnswers = [];
+
+function gkRender(){
+  const total = gkQuestions.length;
+  const data = gkQuestions[gkStep];
+  document.getElementById('gkCount').textContent = 'Pergunta ' + (gkStep+1) + ' de ' + total;
+  document.getElementById('gkQuestion').textContent = data.q;
+  const optsHtml = data.opts.map((o,i)=>{
+    const sel = gkAnswers[gkStep] === i ? 'selected' : '';
+    return '<div class="opt-card '+sel+'" onclick="gkSelect('+i+')"><div class="oc-icon">'+o.icon+'</div><div class="oc-text"><b>'+o.t+'</b><span>'+o.s+'</span></div></div>';
+  }).join('');
+  document.getElementById('gkOptions').innerHTML = optsHtml;
+
+  for(let i=1;i<=5;i++){
+    const dot = document.getElementById('gkDot'+i);
+    dot.classList.remove('done','current');
+    if(i-1 < gkStep) dot.classList.add('done');
+    else if(i-1 === gkStep) dot.classList.add('current');
+  }
+  document.getElementById('gkFillLine').style.width = (gkStep/(total-1))*100 + '%';
+  document.getElementById('gkBackBtn').style.visibility = gkStep === 0 ? 'hidden' : 'visible';
+  document.getElementById('gkNextBtn').textContent = gkStep === total-1 ? 'Concluir' : 'Próximo';
+}
+function gkSelect(i){
+  gkAnswers[gkStep] = i;
+  gkRender();
+}
+function gkNext(){
+  if(gkStep < gkQuestions.length - 1){
+    gkStep++;
+    gkRender();
+  } else {
+    switchScreen('s-home');
+  }
+}
+function gkPrev(){
+  if(gkStep > 0){
+    gkStep--;
+    gkRender();
+  }
+}
+gkRender();
+
+/* ---------- CALENDAR GRID ---------- */
+const calDays = document.getElementById('calDays');
+const daysInMonth = 31;
+const startIdx = 5; // Aug 1 2026 is a Saturday, Mon=0
+const tasks = {
+  3: [{t:'revisao', l:'Revisão · IC'}],
+  5: [{t:'contato', l:'1º contato · Sepse'}],
+  7: [{t:'prova', l:'Simulado B2'}],
+  10: [{t:'revisao', l:'Revisão · TB'}],
+  12: [{t:'contato', l:'1º contato · AVC'}],
+  14: [{t:'revisao', l:'Revisão · PAC'}],
+  18: [{t:'prova', l:'Prova módulo 3'}],
+  21: [{t:'revisao', l:'Revisão · IC'}],
+  24: [{t:'contato', l:'1º contato · IAM'}],
+  27: [{t:'revisao', l:'Revisão · AVC'}],
+};
+let calHtml = '';
+for(let i=0;i<startIdx;i++){ calHtml += '<div class="cal-cell empty"></div>'; }
+for(let d=1; d<=daysInMonth; d++){
+  let cls = 'cal-cell';
+  if(d===8) cls += ' today';
+  if(d===1) cls += ' ritual-day';
+  calHtml += '<div class="'+cls+'">';
+  calHtml += '<div class="dnum">'+String(d).padStart(2,'0')+'</div>';
+  if(d===1){ calHtml += '<div class="ritual-star"><svg class="rocket-icon" width="12" height="12"><use href="#rocket-svg"/></svg></div>'; }
+  if(tasks[d]){
+    tasks[d].forEach(tk=>{ calHtml += '<div class="cal-tag '+tk.t+'">'+tk.l+'</div>'; });
+  }
+  calHtml += '</div>';
+}
+calDays.innerHTML = calHtml;
+
+/* ---------- MINI CALENDAR INSIDE PHONE MOCKUP (landing hero) ---------- */
+const pcGrid = document.getElementById('pcGridMini');
+if(pcGrid){
+  const miniTasks = { 2:'green', 4:'pink', 6:'wine', 9:'green', 11:'pink', 13:'green', 17:'wine', 20:'green', 23:'pink', 26:'green' };
+  const colorVar = { green:'var(--green)', wine:'var(--wine)', pink:'var(--pink)' };
+  let miniHtml = '';
+  const miniStart = 5;
+  for(let i=0;i<miniStart;i++){ miniHtml += '<div class="pc-cell" style="background:transparent"></div>'; }
+  for(let d=1; d<=28; d++){
+    let cls = 'pc-cell';
+    if(d===8) cls += ' today';
+    miniHtml += '<div class="'+cls+'">';
+    if(miniTasks[d]){ miniHtml += '<i style="background:'+colorVar[miniTasks[d]]+'"></i>'; }
+    miniHtml += '</div>';
+  }
+  pcGrid.innerHTML = miniHtml;
+}
+
+/* ================= FLASHCARDS: SPACED REPETITION SYSTEM ================= */
+/* Estágios e intervalos em dias, inspirados na curva do esquecimento de Ebbinghaus.
+   Cada avaliação move o cartão para frente, mantém, ou reinicia o estágio. */
+const REVIEW_INTERVALS = [1, 3, 7, 15, 30, 60];
+const STAGE_LABELS = ['Novo','Novo','Aprendendo','Aprendendo','Consolidado','Consolidado'];
+
+let flashcards = [
+  { id:1, front:'Quais são os principais sinais de congestão pulmonar na insuficiência cardíaca?', back:'Dispneia, ortopneia, estertores crepitantes em bases pulmonares e, em casos mais graves, edema agudo de pulmão.', image:null, stage:0 },
+  { id:2, front:'Qual a diferença entre insuficiência cardíaca com fração de ejeção reduzida e preservada?', back:'Na reduzida, a fração de ejeção do ventrículo esquerdo está abaixo de 40%, com falha na contração. Na preservada, a fração está normal, mas o ventrículo não relaxa nem enche adequadamente.', image:null, stage:2 },
+  { id:3, front:'Cite as principais classes de medicamentos usadas no tratamento da IC com fração reduzida.', back:'Inibidores da ECA ou BRA, betabloqueadores, antagonistas da aldosterona, inibidores de SGLT2, e diuréticos para controle de sintomas.', image:null, stage:3 },
+  { id:4, front:'O que caracteriza a classe funcional IV da NYHA?', back:'Sintomas de insuficiência cardíaca presentes mesmo em repouso, com qualquer atividade física aumentando o desconforto.', image:null, stage:4 },
+  { id:5, front:'Qual exame de imagem é padrão ouro para avaliar a função ventricular na IC?', back:'O ecocardiograma transtorácico, que permite calcular a fração de ejeção e avaliar estrutura e função cardíaca.', image:null, stage:5 },
+  { id:6, front:'Por que o BNP é útil na investigação de dispneia aguda?', back:'Porque é liberado pelo miocárdio em resposta ao estiramento ventricular, e valores elevados apoiam o diagnóstico de origem cardíaca para a dispneia.', image:null, stage:1 },
+];
+
+function daysFromToday(days){
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+}
+function stageBadgeClass(stage){
+  const label = STAGE_LABELS[stage];
+  if(label === 'Novo') return 'novo';
+  if(label === 'Aprendendo') return 'aprendendo';
+  return 'consolidado';
+}
+
+function renderFcList(){
+  const list = document.getElementById('fcList');
+  if(!list) return;
+  let html = '';
+  flashcards.forEach(card=>{
+    const badgeClass = stageBadgeClass(card.stage);
+    const label = STAGE_LABELS[card.stage];
+    html += '<div class="fc-row">';
+    html += '<div class="fc-thumb">' + (card.image ? '<img src="'+card.image+'">' : '🗂️') + '</div>';
+    html += '<div class="fc-row-body"><b>'+card.front+'</b><span>Próxima revisão em '+daysFromToday(REVIEW_INTERVALS[card.stage])+'</span></div>';
+    html += '<div class="fc-stage '+badgeClass+'">'+label+'</div>';
+    html += '</div>';
+  });
+  document.getElementById('sdCardCount').textContent = flashcards.length;
+  list.innerHTML = html;
+}
+renderFcList();
+
+/* ---------- image upload on the new flashcard form ---------- */
+const fcImageTrigger = document.getElementById('fcImageTrigger');
+if(fcImageTrigger){
+  fcImageTrigger.addEventListener('click', ()=> document.getElementById('fcImageInput').click());
+  document.getElementById('fcImageInput').addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(file){
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        document.getElementById('fcImagePreview').src = ev.target.result;
+        document.getElementById('fcImagePreview').style.display = 'block';
+        document.getElementById('fcImagePlaceholder').style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+/* ---------- review session ---------- */
+let reviewQueue = [];
+let reviewIndex = 0;
+let reviewResults = [];
+
+function startReview(){
+  reviewQueue = flashcards.slice(0, 3); // cartões previstos para hoje, nesta demonstração
+  reviewIndex = 0;
+  reviewResults = [];
+  switchScreen('s-flashcard-review');
+  loadReviewCard();
+}
+function loadReviewCard(){
+  const card = reviewQueue[reviewIndex];
+  document.getElementById('flipInner').classList.remove('flipped');
+  document.getElementById('cardFrontText').textContent = card.front;
+  document.getElementById('cardBackText').textContent = card.back;
+  document.getElementById('reviewGrading').style.visibility = 'hidden';
+  document.getElementById('reviewProgressLabel').textContent = 'Cartão ' + (reviewIndex+1) + ' de ' + reviewQueue.length;
+  document.getElementById('reviewProgressFill').style.width = (reviewIndex / reviewQueue.length) * 100 + '%';
+}
+function flipCard(){
+  const inner = document.getElementById('flipInner');
+  inner.classList.toggle('flipped');
+  if(inner.classList.contains('flipped')){
+    document.getElementById('reviewGrading').style.visibility = 'visible';
+  }
+}
+function gradeCard(grade){
+  // grade: 0 = não lembrei, 1 = com esforço, 2 = lembrei fácil
+  const card = reviewQueue[reviewIndex];
+  if(grade === 0){ card.stage = 0; }
+  else if(grade === 1){ card.stage = Math.min(card.stage, REVIEW_INTERVALS.length - 1); }
+  else{ card.stage = Math.min(card.stage + 1, REVIEW_INTERVALS.length - 1); }
+  reviewResults.push(grade);
+
+  reviewIndex++;
+  if(reviewIndex < reviewQueue.length){
+    loadReviewCard();
+  } else {
+    finishReview();
+  }
+}
+function finishReview(){
+  document.getElementById('reviewProgressFill').style.width = '100%';
+  const total = reviewResults.length;
+  const remembered = reviewResults.filter(g => g > 0).length;
+  const retention = Math.round((remembered / total) * 100);
+  document.getElementById('ssTotal').textContent = total;
+  document.getElementById('ssRetention').textContent = retention + '%';
+
+  const soon = reviewQueue.filter(c => REVIEW_INTERVALS[c.stage] <= 3).length;
+  const later = total - soon;
+  let info = '';
+  if(soon > 0) info += soon + ' cartão' + (soon>1?'s':'') + ' em poucos dias';
+  if(soon > 0 && later > 0) info += ', ';
+  if(later > 0) info += later + ' cartão' + (later>1?'s':'') + ' mais adiante';
+  document.getElementById('ssNextInfo').textContent = info || 'tudo revisado por agora';
+
+  renderFcList();
+  switchScreen('s-flashcard-summary');
+}
+</script>
+</body>
+</html>
