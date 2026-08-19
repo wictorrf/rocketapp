@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/queries/profile";
-import { getMonthCalendar, getMonthlyPlanMission } from "@/lib/queries/calendar";
+import { getMonthCalendar, getMonthlyPlan } from "@/lib/queries/calendar";
 import { RocketIcon } from "@/components/ui/RocketIcon";
-import { NewTaskForm } from "@/components/calendar/NewTaskForm";
+import { NewEventModal } from "@/components/calendar/NewEventModal";
 import { MonthlyPlanForm } from "@/components/calendar/MonthlyPlanForm";
+import { MonthlyPlanViewer } from "@/components/calendar/MonthlyPlanViewer";
+import { TASK_TYPE_LABEL, resolveTaskColor } from "@/lib/constants/calendar";
 
 const MONTH_NAMES_PT = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -19,9 +21,10 @@ export default async function CalendarPage({
   if (!profile) redirect("/login");
 
   const now = new Date();
-  const { year: yearParam, month: monthParam, plan } = await searchParams;
+  const { year: yearParam, month: monthParam, plan, day: dayParam } = await searchParams;
   const year = Number(yearParam) || now.getFullYear();
   const month = Number(monthParam) || now.getMonth() + 1;
+  const selectedDay = Number(dayParam) || null;
 
   const calendar = await getMonthCalendar(profile.userId, year, month);
   const monthLabel = MONTH_NAMES_PT[month - 1];
@@ -31,7 +34,9 @@ export default async function CalendarPage({
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
 
   const showPlanForm = plan === "1" && !calendar.hasMonthlyPlan;
-  const existingMission = calendar.hasMonthlyPlan ? await getMonthlyPlanMission(profile.userId, year, month) : "";
+  const monthlyPlan = calendar.hasMonthlyPlan ? await getMonthlyPlan(profile.userId, year, month) : null;
+
+  const selectedDayEntry = selectedDay ? calendar.days.find((d) => d.day === selectedDay) : null;
 
   return (
     <div>
@@ -43,8 +48,8 @@ export default async function CalendarPage({
           <div>
             <b>Ritual de planejamento mensal</b>
             <span>
-              {calendar.hasMonthlyPlan
-                ? existingMission
+              {monthlyPlan
+                ? monthlyPlan.goals.mission
                 : `Defina suas metas de ${monthLabel} e deixe a rotina organizada automaticamente`}
             </span>
           </div>
@@ -57,10 +62,9 @@ export default async function CalendarPage({
       </div>
 
       {showPlanForm && <MonthlyPlanForm month={monthKey} monthLabel={monthLabel} />}
+      {monthlyPlan && <MonthlyPlanViewer plan={monthlyPlan} month={monthKey} monthLabel={monthLabel} />}
 
-      <NewTaskForm />
-
-      <div className="cal-toolbar">
+      <div className="cal-toolbar" style={{ marginTop: 24 }}>
         <div className="cal-nav">
           <Link href={`/calendar?year=${prevMonth.year}&month=${prevMonth.month}`} aria-label="Mês anterior">
             ‹
@@ -80,13 +84,21 @@ export default async function CalendarPage({
             <span className="dot" style={{ background: "var(--wine)" }} /> Prova/Simulado
           </div>
           <div className="li">
+            <span className="dot" style={{ background: "var(--coal)" }} /> Questões
+          </div>
+          <div className="li">
             <span className="dot" style={{ background: "var(--pink)" }} /> Primeiro contato
+          </div>
+          <div className="li">
+            <span className="dot" style={{ background: "var(--amber)" }} /> Aula
           </div>
           <div className="li">
             <span className="dot" style={{ background: "var(--wine-deep)" }} /> Planejamento
           </div>
         </div>
       </div>
+
+      <NewEventModal />
 
       <div className="cal-grid">
         <div className="cal-weekdays">
@@ -99,9 +111,10 @@ export default async function CalendarPage({
             <div key={`empty-${i}`} className="cal-cell empty" />
           ))}
           {calendar.days.map((d) => (
-            <div
+            <Link
               key={d.dateKey}
-              className={`cal-cell ${d.isToday ? "today" : ""} ${d.hasRitual ? "ritual-day" : ""}`}
+              href={`/calendar?year=${year}&month=${month}&day=${d.day}`}
+              className={`cal-cell clickable ${d.isToday ? "today" : ""} ${d.hasRitual ? "ritual-day" : ""} ${selectedDay === d.day ? "selected" : ""}`}
             >
               <div className="dnum">{String(d.day).padStart(2, "0")}</div>
               {d.hasRitual && (
@@ -110,14 +123,50 @@ export default async function CalendarPage({
                 </div>
               )}
               {d.tasks.map((t) => (
-                <div key={t.id} className={`cal-tag ${t.type}`}>
+                <div
+                  key={t.id}
+                  className={`cal-tag ${t.color ? "" : t.type}`}
+                  style={t.color ? { background: t.color } : undefined}
+                >
+                  {t.emoji ? `${t.emoji} ` : ""}
                   {t.title}
                 </div>
               ))}
-            </div>
+            </Link>
           ))}
         </div>
       </div>
+
+      {selectedDayEntry && (
+        <div className="card" style={{ marginTop: 20 }}>
+          <h2 className="section-title">
+            {selectedDayEntry.day} de {monthLabel}
+          </h2>
+          {selectedDayEntry.tasks.length === 0 ? (
+            <p style={{ fontSize: 13.5, color: "var(--text-muted)" }}>Nada programado pra esse dia.</p>
+          ) : (
+            <div className="day-detail-list">
+              {selectedDayEntry.tasks.map((t) => (
+                <div key={t.id} className="day-detail-row">
+                  <div className="dd-dot" style={{ background: resolveTaskColor(t) }} />
+                  <div className="dd-body">
+                    <b>
+                      {t.emoji ? `${t.emoji} ` : ""}
+                      {t.title}
+                    </b>
+                    <div className="dd-meta">
+                      <span>{TASK_TYPE_LABEL[t.type] ?? t.type}</span>
+                      {t.time && <span>🕐 {t.time.slice(0, 5)}</span>}
+                      {t.location && <span>📍 {t.location}</span>}
+                    </div>
+                    {t.notes && <div className="dd-notes">{t.notes}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

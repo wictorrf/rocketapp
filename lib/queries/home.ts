@@ -263,13 +263,15 @@ export async function getWeekActivityDots(userId: string): Promise<WeekDot[]> {
 
 export type TodayTask = {
   id: string;
-  type: "revisao" | "prova" | "contato" | "ritual";
+  type: "revisao" | "prova" | "contato" | "ritual" | "aula" | "questoes";
   title: string;
   subtitle: string;
   time: string | null;
   href: string;
   checkable: boolean;
   done: boolean;
+  color: string | null;
+  emoji: string | null;
 };
 
 export async function getTodayTasks(userId: string): Promise<TodayTask[]> {
@@ -278,7 +280,7 @@ export async function getTodayTasks(userId: string): Promise<TodayTask[]> {
 
   const { data: manualTasks } = await supabase
     .from("calendar_tasks")
-    .select("id, type, title, scheduled_time, subject_id, topic_id, status")
+    .select("id, type, title, scheduled_time, subject_id, topic_id, status, color, emoji")
     .eq("user_id", userId)
     .eq("scheduled_date", todayKey)
     .order("scheduled_time", { ascending: true, nullsFirst: false });
@@ -292,6 +294,8 @@ export async function getTodayTasks(userId: string): Promise<TodayTask[]> {
     href: t.subject_id && t.topic_id ? `/subjects/${t.subject_id}/topics/${t.topic_id}` : "/calendar",
     checkable: true,
     done: t.status === "done",
+    color: t.color,
+    emoji: t.emoji,
   }));
 
   const { data: due } = await supabase
@@ -327,6 +331,8 @@ export async function getTodayTasks(userId: string): Promise<TodayTask[]> {
         href: `/subjects/${topic.subject_id}/topics/${topic.id}`,
         checkable: false,
         done: false,
+        color: null,
+        emoji: null,
       });
     }
   }

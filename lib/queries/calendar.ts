@@ -5,12 +5,24 @@ function firstOfMonthKey(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, "0")}-01`;
 }
 
+export type CalendarTaskEntry = {
+  id: string;
+  type: "revisao" | "prova" | "contato" | "ritual" | "aula" | "questoes";
+  title: string;
+  color: string | null;
+  emoji: string | null;
+  time: string | null;
+  location: string | null;
+  notes: string | null;
+  status: "pending" | "done";
+};
+
 export type DayEntry = {
   day: number;
   dateKey: string;
   isToday: boolean;
   hasRitual: boolean;
-  tasks: { id: string; type: "revisao" | "prova" | "contato" | "ritual"; title: string }[];
+  tasks: CalendarTaskEntry[];
 };
 
 export type MonthCalendar = {
@@ -38,7 +50,7 @@ export async function getMonthCalendar(
   const [{ data: manualTasks }, { data: dueFlashcards }, { data: monthlyPlan }] = await Promise.all([
     supabase
       .from("calendar_tasks")
-      .select("id, type, title, scheduled_date")
+      .select("id, type, title, scheduled_date, scheduled_time, color, emoji, location, notes, status")
       .eq("user_id", userId)
       .gte("scheduled_date", monthStart)
       .lte("scheduled_date", monthEnd),
@@ -70,7 +82,17 @@ export async function getMonthCalendar(
     const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const tasks: DayEntry["tasks"] = (manualTasks ?? [])
       .filter((t) => t.scheduled_date === dateKey)
-      .map((t) => ({ id: t.id, type: t.type as DayEntry["tasks"][number]["type"], title: t.title }));
+      .map((t) => ({
+        id: t.id,
+        type: t.type as CalendarTaskEntry["type"],
+        title: t.title,
+        color: t.color,
+        emoji: t.emoji,
+        time: t.scheduled_time,
+        location: t.location,
+        notes: t.notes,
+        status: t.status as "pending" | "done",
+      }));
 
     const revisaoCount = revisaoCountByDay.get(dateKey) ?? 0;
     if (revisaoCount > 0) {
@@ -78,6 +100,12 @@ export async function getMonthCalendar(
         id: `revisao-${dateKey}`,
         type: "revisao",
         title: `Revisão · ${revisaoCount} ${revisaoCount > 1 ? "cartões" : "cartão"}`,
+        color: null,
+        emoji: null,
+        time: null,
+        location: null,
+        notes: null,
+        status: "pending",
       });
     }
 
@@ -100,15 +128,52 @@ export async function getMonthCalendar(
   };
 }
 
-export async function getMonthlyPlanMission(userId: string, year: number, month: number) {
+export type MonthlyPlanPillar = {
+  key: string;
+  purpose: string;
+  objectives: string[];
+};
+
+export type MonthlyPlanGoals = {
+  mission: string;
+  pillars: MonthlyPlanPillar[];
+  mainGoals: { pillarKey: string; text: string }[];
+  review: string | null;
+};
+
+export type MonthlyPlan = {
+  goals: MonthlyPlanGoals;
+  completedAt: string | null;
+  reviewedAt: string | null;
+};
+
+export async function getMonthlyPlan(userId: string, year: number, month: number): Promise<MonthlyPlan | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("monthly_plans")
-    .select("goals")
+    .select("goals, completed_at, reviewed_at")
     .eq("user_id", userId)
     .eq("month", firstOfMonthKey(year, month))
     .maybeSingle();
-  return (data?.goals as { mission?: string } | null)?.mission ?? "";
+  if (!data) return null;
+
+  const goals = data.goals as Partial<MonthlyPlanGoals> | null;
+  return {
+    goals: {
+      mission: goals?.mission ?? "",
+      pillars: goals?.pillars ?? [],
+      mainGoals: goals?.mainGoals ?? [],
+      review: goals?.review ?? null,
+    },
+    completedAt: data.completed_at,
+    reviewedAt: data.reviewed_at,
+  };
+}
+
+// Atalho leve pra Home, que só precisa da frase da missão.
+export async function getMonthlyPlanMission(userId: string, year: number, month: number): Promise<string> {
+  const plan = await getMonthlyPlan(userId, year, month);
+  return plan?.goals.mission ?? "";
 }
 
 export type UpcomingExam = {
