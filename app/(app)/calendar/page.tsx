@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/queries/profile";
-import { getMonthCalendar, getMonthlyPlanGoals } from "@/lib/queries/calendar";
+import { getMonthCalendar, getMonthlyPlanMission } from "@/lib/queries/calendar";
 import { RocketIcon } from "@/components/ui/RocketIcon";
 import { NewTaskForm } from "@/components/calendar/NewTaskForm";
 import { MonthlyPlanForm } from "@/components/calendar/MonthlyPlanForm";
@@ -31,7 +31,7 @@ export default async function CalendarPage({
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
 
   const showPlanForm = plan === "1" && !calendar.hasMonthlyPlan;
-  const existingGoals = calendar.hasMonthlyPlan ? await getMonthlyPlanGoals(profile.userId, year, month) : "";
+  const existingMission = calendar.hasMonthlyPlan ? await getMonthlyPlanMission(profile.userId, year, month) : "";
 
   return (
     <div>
@@ -44,7 +44,7 @@ export default async function CalendarPage({
             <b>Ritual de planejamento mensal</b>
             <span>
               {calendar.hasMonthlyPlan
-                ? existingGoals
+                ? existingMission
                 : `Defina suas metas de ${monthLabel} e deixe a rotina organizada automaticamente`}
             </span>
           </div>

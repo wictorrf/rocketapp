@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar streak={streak} isAdmin={profile.isAdmin} />
       <div className="main">
         <TopBar
-          displayTitle={profile.displayTitle}
+          displayName={profile.displayName}
           areaLabel={profile.areaLabel}
           photoUrl={profile.photoUrl}
         />

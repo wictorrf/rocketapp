@@ -8,7 +8,7 @@ export const NAV_ITEMS = [
 
 // Mapeia prefixo de rota → título mostrado no topbar (h1).
 export const ROUTE_TITLES: { prefix: string; title: string }[] = [
-  { prefix: "/home", title: "Sua rotina" },
+  { prefix: "/home", title: "Painel de Voo" },
   { prefix: "/calendar", title: "Calendário" },
   { prefix: "/metrics", title: "Métricas" },
   { prefix: "/subjects", title: "Disciplinas" },

@@ -4,13 +4,7 @@ import { useActionState, useState } from "react";
 import { RocketWordmark } from "@/components/ui/RocketWordmark";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { savePersonalizeAction, type ActionState } from "@/lib/actions/profile";
-import {
-  AREA_OPTIONS,
-  GENDER_OPTIONS,
-  computeDisplayTitle,
-  type Area,
-  type GenderTreatment,
-} from "@/lib/constants/title-map";
+import { AREA_OPTIONS, type Area } from "@/lib/constants/title-map";
 
 const initialState: ActionState = { error: null };
 
@@ -18,10 +12,9 @@ export function PersonalizeForm() {
   const [state, formAction] = useActionState(savePersonalizeAction, initialState);
   const [fullName, setFullName] = useState("");
   const [area, setArea] = useState<Area>("medicina");
-  const [gender, setGender] = useState<GenderTreatment>("a");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
-  const displayTitle = computeDisplayTitle(fullName || "Você", area, gender);
+  const displayName = fullName.trim() || "Você";
   const areaLabel = AREA_OPTIONS.find((o) => o.value === area)?.label ?? "";
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -58,14 +51,14 @@ export function PersonalizeForm() {
                 {photoPreview ? <img src={photoPreview} alt="" /> : "👤"}
               </div>
               <div>
-                <div className="pc-name">{displayTitle}</div>
+                <div className="pc-name">{displayName}</div>
                 <div className="pc-role">{areaLabel}</div>
               </div>
             </div>
           </div>
           <div className="preview-hero">
             <span className="script">Bem-vinda,</span>
-            <h4>{displayTitle}</h4>
+            <h4>{displayName}</h4>
             <p>Sua rotina de estudos começa agora</p>
           </div>
           <div className="preview-cards">
@@ -119,41 +112,20 @@ export function PersonalizeForm() {
               />
             </div>
 
-            <div className="field-row">
-              <div className="field">
-                <label htmlFor="area">Área de atuação</label>
-                <select
-                  id="area"
-                  name="area"
-                  value={area}
-                  onChange={(e) => setArea(e.target.value as Area)}
-                >
-                  {AREA_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="gender">Tratamento</label>
-                <select
-                  id="gender"
-                  name="gender"
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value as GenderTreatment)}
-                >
-                  {GENDER_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="title-preview">
-              Você será chamada de <b>{displayTitle}</b> em toda a plataforma.
+            <div className="field">
+              <label htmlFor="area">Área de atuação</label>
+              <select
+                id="area"
+                name="area"
+                value={area}
+                onChange={(e) => setArea(e.target.value as Area)}
+              >
+                {AREA_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {state.error && <p className="error-text">{state.error}</p>}

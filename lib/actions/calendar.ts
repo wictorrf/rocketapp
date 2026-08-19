@@ -50,13 +50,13 @@ export async function saveMonthlyPlanAction(
   if (!user) redirect("/login");
 
   const month = String(formData.get("month") ?? ""); // YYYY-MM-01
-  const goalsText = String(formData.get("goals") ?? "").trim();
-  if (!month || !goalsText) return { error: "Escreva suas metas do mês." };
+  const mission = String(formData.get("mission") ?? "").trim();
+  if (!month || !mission) return { error: "Escreva a missão do mês." };
 
   const { error } = await supabase
     .from("monthly_plans")
     .upsert(
-      { user_id: user.id, month, goals: { text: goalsText }, completed_at: new Date().toISOString() },
+      { user_id: user.id, month, goals: { mission }, completed_at: new Date().toISOString() },
       { onConflict: "user_id,month" },
     );
   if (error) return { error: "Não foi possível salvar o planejamento. Tente novamente." };
@@ -64,4 +64,21 @@ export async function saveMonthlyPlanAction(
   revalidatePath("/calendar");
   revalidatePath("/home");
   return { error: null };
+}
+
+export async function toggleTaskStatusAction(taskId: string, done: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("calendar_tasks")
+    .update({ status: done ? "done" : "pending" })
+    .eq("id", taskId)
+    .eq("user_id", user.id);
+
+  revalidatePath("/home");
+  revalidatePath("/calendar");
 }

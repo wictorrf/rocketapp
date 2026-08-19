@@ -3,11 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
-import {
-  computeDisplayTitle,
-  type Area,
-  type GenderTreatment,
-} from "@/lib/constants/title-map";
+import { type Area } from "@/lib/constants/title-map";
 import { ONBOARDING_QUESTIONS } from "@/lib/constants/onboarding-questions";
 
 export type ActionState = { error: string | null };
@@ -24,10 +20,9 @@ export async function savePersonalizeAction(
 
   const fullName = String(formData.get("fullName") ?? "").trim();
   const area = String(formData.get("area") ?? "") as Area;
-  const gender = String(formData.get("gender") ?? "") as GenderTreatment;
   const photo = formData.get("photo");
 
-  if (!fullName || !area || !gender) {
+  if (!fullName || !area) {
     return { error: "Preencha todos os campos." };
   }
 
@@ -44,15 +39,11 @@ export async function savePersonalizeAction(
     photoPath = path;
   }
 
-  const displayTitle = computeDisplayTitle(fullName, area, gender);
-
   const { error } = await supabase
     .from("profiles")
     .update({
       full_name: fullName,
       area,
-      gender_treatment: gender,
-      display_title: displayTitle,
       ...(photoPath ? { photo_url: photoPath } : {}),
     })
     .eq("id", user.id);
@@ -121,10 +112,9 @@ export async function updateProfileAction(
 
   const fullName = String(formData.get("fullName") ?? "").trim();
   const area = String(formData.get("area") ?? "") as Area;
-  const gender = String(formData.get("gender") ?? "") as GenderTreatment;
   const photo = formData.get("photo");
 
-  if (!fullName || !area || !gender) {
+  if (!fullName || !area) {
     return { error: "Preencha todos os campos." };
   }
 
@@ -141,15 +131,11 @@ export async function updateProfileAction(
     photoPath = path;
   }
 
-  const displayTitle = computeDisplayTitle(fullName, area, gender);
-
   const { error } = await supabase
     .from("profiles")
     .update({
       full_name: fullName,
       area,
-      gender_treatment: gender,
-      display_title: displayTitle,
       ...(photoPath ? { photo_url: photoPath } : {}),
     })
     .eq("id", user.id);

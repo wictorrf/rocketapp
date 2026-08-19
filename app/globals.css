@@ -1304,6 +1304,39 @@ h2.section-title {
 .task-dot.ritual {
   background: var(--wine-deep);
 }
+.task-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: transparent;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  transition: all 0.15s ease;
+}
+.task-check.revisao {
+  border-color: var(--green);
+}
+.task-check.prova {
+  border-color: var(--wine);
+}
+.task-check.contato {
+  border-color: var(--pink);
+}
+.task-check.ritual {
+  border-color: var(--wine-deep);
+}
+.task-check.done {
+  background: var(--green);
+  border-color: var(--green);
+}
 .task-row .t-info b {
   font-size: 14px;
   display: block;
@@ -1353,6 +1386,87 @@ h2.section-title {
   background: var(--pink);
   color: var(--wine-deep);
   font-weight: 700;
+}
+.streak-next-exam {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.streak-next-exam span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 4px;
+}
+.streak-next-exam b {
+  font-family: var(--font-mono);
+  color: var(--pink);
+  font-size: 16px;
+  display: block;
+}
+.streak-next-exam em {
+  font-style: normal;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ---------- próximas provas (Home) ---------- */
+.exam-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.exam-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--ice);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.exam-row .ex-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--pink-soft);
+  color: var(--wine);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.exam-row .ex-info {
+  flex: 1;
+  min-width: 0;
+}
+.exam-row .ex-info b {
+  font-size: 13.5px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.exam-row .ex-info span {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.exam-row .ex-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--wine);
+  color: #fff;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.exam-row .ex-badge.today {
+  background: var(--green);
 }
 .cal-toolbar {
   display: flex;

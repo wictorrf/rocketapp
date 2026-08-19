@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { titleForPath } from "./nav-items";
 
 export function TopBar({
-  displayTitle,
+  displayName,
   areaLabel,
   photoUrl,
 }: {
-  displayTitle: string;
+  displayName: string;
   areaLabel: string;
   photoUrl: string | null;
 }) {
@@ -19,9 +19,6 @@ export function TopBar({
     <div className="topbar">
       <h1>{titleForPath(pathname)}</h1>
       <div className="topbar-right">
-        <div className="icon-btn" aria-hidden="true">
-          🔔
-        </div>
         <Link href="/profile" className="profile-chip">
           {photoUrl ? (
             <img src={photoUrl} alt="" />
@@ -34,7 +31,7 @@ export function TopBar({
             </div>
           )}
           <div>
-            <div className="pname">{displayTitle}</div>
+            <div className="pname">{displayName}</div>
             <div className="prole">{areaLabel}</div>
           </div>
         </Link>

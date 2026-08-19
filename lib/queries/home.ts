@@ -268,6 +268,8 @@ export type TodayTask = {
   subtitle: string;
   time: string | null;
   href: string;
+  checkable: boolean;
+  done: boolean;
 };
 
 export async function getTodayTasks(userId: string): Promise<TodayTask[]> {
@@ -276,7 +278,7 @@ export async function getTodayTasks(userId: string): Promise<TodayTask[]> {
 
   const { data: manualTasks } = await supabase
     .from("calendar_tasks")
-    .select("id, type, title, scheduled_time, subject_id, topic_id")
+    .select("id, type, title, scheduled_time, subject_id, topic_id, status")
     .eq("user_id", userId)
     .eq("scheduled_date", todayKey)
     .order("scheduled_time", { ascending: true, nullsFirst: false });
@@ -288,6 +290,8 @@ export async function getTodayTasks(userId: string): Promise<TodayTask[]> {
     subtitle: "",
     time: t.scheduled_time,
     href: t.subject_id && t.topic_id ? `/subjects/${t.subject_id}/topics/${t.topic_id}` : "/calendar",
+    checkable: true,
+    done: t.status === "done",
   }));
 
   const { data: due } = await supabase
@@ -321,6 +325,8 @@ export async function getTodayTasks(userId: string): Promise<TodayTask[]> {
         subtitle: `Revisão, ${subjectName ?? ""} · ${count} ${count > 1 ? "cartões" : "cartão"}`,
         time: null,
         href: `/subjects/${topic.subject_id}/topics/${topic.id}`,
+        checkable: false,
+        done: false,
       });
     }
   }

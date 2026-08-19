@@ -4,7 +4,7 @@ import { AREA_LABEL, type Area } from "@/lib/constants/title-map";
 
 export type CurrentUserProfile = {
   userId: string;
-  displayTitle: string;
+  displayName: string;
   areaLabel: string;
   photoUrl: string | null;
   onboardingCompleted: boolean;
@@ -22,7 +22,7 @@ export async function getCurrentUserProfile(): Promise<CurrentUserProfile | null
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, photo_url, area, onboarding_completed_at, is_admin, display_title")
+    .select("full_name, photo_url, area, onboarding_completed_at, is_admin")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -30,7 +30,7 @@ export async function getCurrentUserProfile(): Promise<CurrentUserProfile | null
 
   return {
     userId: user.id,
-    displayTitle: profile?.display_title || "Você",
+    displayName: profile?.full_name || "Você",
     areaLabel: profile?.area ? AREA_LABEL[profile.area as Area] : "",
     photoUrl,
     onboardingCompleted: Boolean(profile?.onboarding_completed_at),
@@ -42,7 +42,6 @@ export type ProfileForEdit = {
   email: string;
   fullName: string;
   area: Area;
-  genderTreatment: "a" | "o" | "x";
   photoUrl: string | null;
 };
 
@@ -57,7 +56,7 @@ export async function getProfileForEdit(): Promise<ProfileForEdit | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, photo_url, area, gender_treatment")
+    .select("full_name, photo_url, area")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -67,7 +66,6 @@ export async function getProfileForEdit(): Promise<ProfileForEdit | null> {
     email: user.email ?? "",
     fullName: profile?.full_name ?? "",
     area: (profile?.area as Area) ?? "medicina",
-    genderTreatment: (profile?.gender_treatment as "a" | "o" | "x") ?? "a",
     photoUrl,
   };
 }

@@ -13,10 +13,10 @@ export function MonthlyPlanForm({ month, monthLabel }: { month: string; monthLab
     <form action={formAction} className="card" style={{ marginBottom: 20 }}>
       <input type="hidden" name="month" value={month} />
       <div className="field">
-        <label htmlFor="goals">Suas metas para {monthLabel}</label>
+        <label htmlFor="mission">Qual é a missão de {monthLabel}?</label>
         <textarea
-          id="goals"
-          name="goals"
+          id="mission"
+          name="mission"
           rows={3}
           placeholder="Ex: terminar cardiologia, revisar neurologia 2x por semana, fazer 200 questões"
           required

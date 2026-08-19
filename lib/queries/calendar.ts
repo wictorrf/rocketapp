@@ -100,7 +100,7 @@ export async function getMonthCalendar(
   };
 }
 
-export async function getMonthlyPlanGoals(userId: string, year: number, month: number) {
+export async function getMonthlyPlanMission(userId: string, year: number, month: number) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("monthly_plans")
@@ -108,5 +108,38 @@ export async function getMonthlyPlanGoals(userId: string, year: number, month: n
     .eq("user_id", userId)
     .eq("month", firstOfMonthKey(year, month))
     .maybeSingle();
-  return (data?.goals as { text?: string } | null)?.text ?? "";
+  return (data?.goals as { mission?: string } | null)?.mission ?? "";
+}
+
+export type UpcomingExam = {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  daysUntil: number;
+};
+
+// Próximas provas cadastradas (calendar_tasks tipo "prova"), da mais
+// próxima em diante — alimenta o bloco "Próximas provas" e a contagem
+// regressiva na Home.
+export async function getUpcomingExams(userId: string, limit = 5): Promise<UpcomingExam[]> {
+  const supabase = await createClient();
+  const todayKey = toLocalDateKey(new Date());
+
+  const { data } = await supabase
+    .from("calendar_tasks")
+    .select("id, title, scheduled_date")
+    .eq("user_id", userId)
+    .eq("type", "prova")
+    .gte("scheduled_date", todayKey)
+    .order("scheduled_date", { ascending: true })
+    .limit(limit);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return (data ?? []).map((t) => {
+    const examDate = new Date(`${t.scheduled_date}T00:00:00`);
+    const daysUntil = Math.round((examDate.getTime() - today.getTime()) / 86_400_000);
+    return { id: t.id, title: t.title, date: t.scheduled_date, daysUntil };
+  });
 }
