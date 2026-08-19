@@ -1817,6 +1817,37 @@ h2.section-title {
   margin-bottom: 8px;
   color: var(--pink);
 }
+
+/* ---------- busca de disciplinas ---------- */
+.subject-search {
+  position: relative;
+  margin-bottom: 18px;
+  max-width: 320px;
+}
+.subject-search input {
+  width: 100%;
+  padding: 11px 15px 11px 40px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  background: var(--white);
+  color: var(--text);
+}
+.subject-search input:focus {
+  outline: none;
+  border-color: var(--wine);
+}
+.subject-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
 .cal-cell.ritual-day {
   background: var(--pink-soft);
 }

@@ -4,12 +4,19 @@ import { getCurrentUserProfile } from "@/lib/queries/profile";
 import { listSubjectsWithSummary } from "@/lib/queries/subjects";
 import { formatRelativeDays, formatHours } from "@/lib/utils/format";
 import { NewSubjectForm } from "@/components/subjects/NewSubjectForm";
+import { SubjectSearchBar } from "@/components/subjects/SubjectSearchBar";
 
-export default async function SubjectsPage() {
+export default async function SubjectsPage({ searchParams }: PageProps<"/subjects">) {
   const profile = await getCurrentUserProfile();
   if (!profile) redirect("/login");
 
-  const subjects = await listSubjectsWithSummary(profile.userId);
+  const { q } = await searchParams;
+  const query = Array.isArray(q) ? q[0] : (q ?? "");
+
+  const allSubjects = await listSubjectsWithSummary(profile.userId);
+  const subjects = query.trim()
+    ? allSubjects.filter((s) => s.name.toLowerCase().includes(query.trim().toLowerCase()))
+    : allSubjects;
 
   return (
     <div>
@@ -20,10 +27,13 @@ export default async function SubjectsPage() {
       </div>
 
       <NewSubjectForm />
+      <SubjectSearchBar initialQuery={query} />
 
       {subjects.length === 0 && (
         <div className="card" style={{ textAlign: "center", color: "var(--text-muted)" }}>
-          Nenhuma disciplina cadastrada ainda. Crie a primeira acima.
+          {query.trim()
+            ? `Nenhuma disciplina encontrada pra "${query}".`
+            : "Nenhuma disciplina cadastrada ainda. Crie a primeira acima."}
         </div>
       )}
 
