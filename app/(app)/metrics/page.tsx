@@ -177,7 +177,7 @@ export default async function MetricsPage({ searchParams }: PageProps<"/metrics"
       <div className="grid cols-2" style={{ marginTop: 18 }}>
         <div className="card">
           <h2 className="section-title">Tempo de estudo por matéria</h2>
-          <PieChart slices={metrics.timeBySubject} emptyLabel="Sem sessões de Modo Foco nesse período ainda." />
+          <PieChart slices={metrics.timeBySubject} emptyLabel="Sem sessões de Study Time nesse período ainda." />
         </div>
         <div className="card">
           <h2 className="section-title">Tempo por tipo de atividade</h2>

@@ -1,6 +1,6 @@
 # Rocket
 
-App de estudos da Comunidade RC — repetição espaçada (SM-2), calendário, disciplinas/assuntos, métricas e Modo Foco.
+App de estudos da Comunidade RC — repetição espaçada (SM-2), calendário, disciplinas/assuntos, métricas e Study Time.
 
 ## Rodando localmente
 

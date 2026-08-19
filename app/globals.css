@@ -20,6 +20,8 @@
   --line: #e1e5e4;
   --green: #4c8b6e;
   --amber: #c98a2c;
+  --green-deep: #1f3d2e;
+  --amber-deep: #4a3110;
   --radius-lg: 20px;
   --radius-md: 14px;
   --radius-sm: 10px;
@@ -2156,6 +2158,19 @@ h2.section-title {
   color: #fff;
   padding: 40px;
   position: relative;
+  transition: background-color 0.6s ease;
+}
+.focus-screen.phase-break {
+  background: var(--green-deep);
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(76, 139, 110, 0.22), transparent 35%),
+    radial-gradient(circle at 85% 85%, rgba(76, 139, 110, 0.18), transparent 40%);
+}
+.focus-screen.phase-simulado {
+  background: var(--amber-deep);
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(201, 138, 44, 0.22), transparent 35%),
+    radial-gradient(circle at 85% 85%, rgba(201, 138, 44, 0.18), transparent 40%);
 }
 .focus-back {
   position: absolute;
@@ -2182,6 +2197,51 @@ h2.section-title {
   font-weight: 700;
   font-size: 13px;
   margin-bottom: 30px;
+}
+.focus-mode-select {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.fm-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.fm-btn.active {
+  background: #fff;
+  color: var(--wine-deep);
+}
+.focus-simulado-input {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+.focus-simulado-input input {
+  width: 90px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  text-transform: none;
+  letter-spacing: normal;
 }
 .timer-ring {
   width: 260px;

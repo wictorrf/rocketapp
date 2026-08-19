@@ -5,7 +5,7 @@ function toDateKey(iso: string) {
   return toLocalDateKey(new Date(iso));
 }
 
-// Sequência de dias seguidos com alguma atividade (Modo Foco ou revisão de
+// Sequência de dias seguidos com alguma atividade (Study Time ou revisão de
 // flashcard), contando pra trás a partir de hoje. v1: busca os timestamps e
 // resolve em memória — reavaliar se a base de usuárias crescer muito.
 export async function computeStreak(userId: string): Promise<number> {

@@ -227,7 +227,7 @@ export async function getWeekStats(userId: string): Promise<WeekStats> {
 export type WeekDot = { letter: string; done: boolean; isToday: boolean };
 
 // Dias da semana atual (Seg a Dom) com marcação de quais tiveram atividade
-// (Modo Foco ou revisão de flashcard), pro widget de constância na Home.
+// (Study Time ou revisão de flashcard), pro widget de constância na Home.
 export async function getWeekActivityDots(userId: string): Promise<WeekDot[]> {
   const supabase = await createClient();
 

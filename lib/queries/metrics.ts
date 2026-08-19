@@ -202,7 +202,7 @@ export async function getMetrics(userId: string, period: MetricsPeriod): Promise
   }, 0);
   const timeByActivity = toPieSlices(
     new Map([
-      ["Modo Foco", focusTotalMinutes],
+      ["Study Time", focusTotalMinutes],
       ["Revisão de flashcards", reviewTotalMinutes],
     ]),
   );
