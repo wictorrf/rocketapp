@@ -84,6 +84,7 @@ export type FlashcardWithStage = {
   stage: StageLabel;
   dueAt: string;
   lastReviewedAt: string | null;
+  intervalDays: number;
 };
 
 export type TopicPanel = {
@@ -125,6 +126,7 @@ export async function getTopicPanel(topicId: string): Promise<TopicPanel> {
       stage: deriveStageLabel({ repetitions: srs?.repetitions ?? 0, intervalDays: srs?.interval_days ?? 0 }),
       dueAt: srs?.due_at ?? todayKey,
       lastReviewedAt: srs?.last_reviewed_at ?? null,
+      intervalDays: srs?.interval_days ?? 0,
     };
   });
 

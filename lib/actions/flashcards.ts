@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { parseRichText } from "@/lib/utils/rich-text";
 
 export type ActionState = { error: string | null };
 
@@ -22,7 +23,12 @@ export async function createFlashcardAction(
   const back = String(formData.get("back") ?? "").trim();
   const image = formData.get("image");
 
-  if (!subjectId || !topicId || !front || !back) {
+  if (
+    !subjectId ||
+    !topicId ||
+    !parseRichText(front).text.trim() ||
+    !parseRichText(back).text.trim()
+  ) {
     return { error: "Preencha a frente e o verso do cartão." };
   }
 

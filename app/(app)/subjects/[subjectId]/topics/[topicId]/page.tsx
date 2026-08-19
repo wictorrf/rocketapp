@@ -7,6 +7,7 @@ import { getSignedUrls } from "@/lib/queries/storage";
 import { formatHours } from "@/lib/utils/format";
 import { FlashcardRow } from "@/components/subjects/FlashcardRow";
 import { QuestionLogForm } from "@/components/subjects/QuestionLogForm";
+import { EbbinghausCurve } from "@/components/subjects/EbbinghausCurve";
 import { startReviewSessionAction } from "@/lib/actions/review";
 
 export default async function TopicDetailPage({
@@ -89,6 +90,17 @@ export default async function TopicDetailPage({
               <b>{panel.dueTodayCount > 0 ? `Hoje, ${panel.dueTodayCount} cartões` : "Nada previsto pra hoje"}</b>
             </div>
           </div>
+
+          {panel.totalFlashcards > 0 && (
+            <div className="card ebbinghaus-card">
+              <h2 className="section-title">Curva do esquecimento desse assunto</h2>
+              <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 14, lineHeight: 1.5 }}>
+                Cada bolinha é um flashcard, posicionado onde ele está na curva de retenção — quanto
+                mais pra direita, mais consolidado na memória.
+              </p>
+              <EbbinghausCurve cards={[...panel.needsReview, ...panel.consolidated]} />
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
             {panel.dueTodayCount > 0 && (

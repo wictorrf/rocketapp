@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { createFlashcardAction, type ActionState } from "@/lib/actions/flashcards";
 
 const initialState: ActionState = { error: null };
@@ -48,27 +49,19 @@ export function NewFlashcardForm({
           <input type="hidden" name="subjectId" value={subjectId} />
           <input type="hidden" name="topicId" value={topicId} />
 
-          <div className="field">
-            <label htmlFor="front">Frente do cartão</label>
-            <textarea
-              id="front"
-              name="front"
-              rows={3}
-              placeholder="Escreva a pergunta ou o estímulo que você quer lembrar"
-              required
-            />
-          </div>
+          <RichTextEditor
+            name="front"
+            label="Frente do cartão"
+            placeholder="Escreva a pergunta ou o estímulo que você quer lembrar"
+            required
+          />
 
-          <div className="field">
-            <label htmlFor="back">Verso do cartão</label>
-            <textarea
-              id="back"
-              name="back"
-              rows={3}
-              placeholder="Escreva a resposta completa"
-              required
-            />
-          </div>
+          <RichTextEditor
+            name="back"
+            label="Verso do cartão"
+            placeholder="Escreva a resposta completa"
+            required
+          />
 
           <div className="field">
             <label htmlFor="image">Imagem (opcional)</label>

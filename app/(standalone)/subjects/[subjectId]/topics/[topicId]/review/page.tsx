@@ -34,8 +34,7 @@ export default async function ReviewPage({
     <ReviewSession
       cards={cardsWithSignedUrls}
       sessionId={sessionId}
-      subjectId={subjectId}
-      topicId={topicId}
+      backHref={`/subjects/${subjectId}/topics/${topicId}`}
     />
   );
 }

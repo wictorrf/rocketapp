@@ -2592,6 +2592,14 @@ h2.section-title {
   font-size: 19px;
   line-height: 1.5;
 }
+.fc-context {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
 .fc-answer {
   font-size: 15px;
   line-height: 1.6;
@@ -2992,4 +3000,126 @@ h2.section-title {
   height: 18px;
   accent-color: var(--wine);
   cursor: pointer;
+}
+
+/* ---------- editor de texto simples (flashcards) ---------- */
+.highlight-composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.highlight-composer input[type="text"] {
+  flex: 1;
+  min-width: 160px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  font-size: 13px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--white);
+}
+.highlight-composer input[type="text"]:focus {
+  outline: none;
+  border-color: var(--wine);
+}
+.format-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+.format-toggle.italic {
+  font-style: italic;
+}
+.format-toggle.active {
+  background: var(--wine);
+  border-color: var(--wine);
+  color: #fff;
+}
+.swatch-sm {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.swatch-sm.selected {
+  box-shadow: 0 0 0 2px var(--wine);
+}
+.highlight-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.highlight-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ice);
+  border-radius: 999px;
+  padding: 5px 6px 5px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.highlight-chip button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 14px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.highlight-chip button:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+.rich-preview {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--ice);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ---------- curva de Ebbinghaus ---------- */
+.ebbinghaus-card {
+  margin-bottom: 20px;
+}
+.ebbinghaus-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.ebbinghaus-legend .li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.ebbinghaus-legend .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
 }

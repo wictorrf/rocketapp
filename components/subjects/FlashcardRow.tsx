@@ -1,5 +1,6 @@
 import { STAGE_LABEL_PT, type StageLabel } from "@/lib/srs/sm2";
 import { formatDueIn, isOverdue } from "@/lib/utils/format";
+import { RichText } from "@/components/ui/RichText";
 
 export function FlashcardRow({
   front,
@@ -19,7 +20,9 @@ export function FlashcardRow({
         {imageUrl ? <img src={imageUrl} alt="" /> : "🗂️"}
       </div>
       <div className="fc-row-body">
-        <b>{front}</b>
+        <b>
+          <RichText raw={front} />
+        </b>
         <span>
           {overdue ? "Revisão atrasada" : `Próxima revisão ${formatDueIn(dueAt)}`}
         </span>

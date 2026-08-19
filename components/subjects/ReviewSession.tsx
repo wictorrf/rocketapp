@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { RocketIcon } from "@/components/ui/RocketIcon";
+import { RichText, richTextToPlain } from "@/components/ui/RichText";
 import { STAGE_LABEL_PT } from "@/lib/srs/sm2";
 import { gradeFlashcardAction, finishReviewSessionAction } from "@/lib/actions/review";
 import type { ReviewCard } from "@/lib/queries/review";
@@ -18,13 +19,11 @@ type ResultEntry = {
 export function ReviewSession({
   cards,
   sessionId,
-  subjectId,
-  topicId,
+  backHref,
 }: {
   cards: ReviewCard[];
   sessionId: string;
-  subjectId: string;
-  topicId: string;
+  backHref: string;
 }) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -33,7 +32,6 @@ export function ReviewSession({
   const [phase, setPhase] = useState<"reviewing" | "summary">("reviewing");
 
   const card = cards[index];
-  const topicUrl = `/subjects/${subjectId}/topics/${topicId}`;
 
   async function handleGrade(grade: Grade) {
     if (grading) return;
@@ -93,7 +91,7 @@ export function ReviewSession({
               <b>Pontos para revisar</b>
               <ul>
                 {toReview.map((r) => (
-                  <li key={r.card.id}>{r.card.front}</li>
+                  <li key={r.card.id}>{richTextToPlain(r.card.front)}</li>
                 ))}
               </ul>
             </div>
@@ -109,8 +107,8 @@ export function ReviewSession({
             </div>
           </div>
 
-          <Link href={topicUrl} className="btn btn-primary btn-block">
-            Voltar para o assunto
+          <Link href={backHref} className="btn btn-primary btn-block">
+            Voltar
           </Link>
           <Link href="/metrics" className="btn btn-ghost btn-block" style={{ marginTop: 10 }}>
             Ver nas métricas
@@ -123,7 +121,7 @@ export function ReviewSession({
   return (
     <div className="review-screen">
       <div className="review-top">
-        <Link href={topicUrl} className="review-back">
+        <Link href={backHref} className="review-back">
           ‹
         </Link>
         <div className="review-progress-wrap">
@@ -152,12 +150,23 @@ export function ReviewSession({
                   style={{ maxWidth: "100%", maxHeight: 100, borderRadius: 8, marginBottom: 12 }}
                 />
               )}
-              <div className="fc-question">{card.front}</div>
+              {(card.topicName || card.subjectName) && (
+                <div className="fc-context">
+                  {card.subjectName}
+                  {card.subjectName && card.topicName ? " · " : ""}
+                  {card.topicName}
+                </div>
+              )}
+              <div className="fc-question">
+                <RichText raw={card.front} />
+              </div>
               <div className="fc-tap-hint">Toque para virar</div>
             </div>
             <div className="flip-face flip-back">
               <div className="fc-eyebrow">Verso</div>
-              <div className="fc-answer">{card.back}</div>
+              <div className="fc-answer">
+                <RichText raw={card.back} />
+              </div>
             </div>
           </div>
         </div>

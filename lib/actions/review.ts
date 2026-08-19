@@ -26,6 +26,26 @@ export async function startReviewSessionAction(formData: FormData) {
   redirect(`/subjects/${subjectId}/topics/${topicId}/review?session=${data.id}`);
 }
 
+// Sessão "revisar tudo misturado" — sem assunto específico, spanning todas
+// as disciplinas da usuária.
+export async function startMixedReviewSessionAction() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data, error } = await supabase
+    .from("review_sessions")
+    .insert({ user_id: user.id, topic_id: null })
+    .select("id")
+    .single();
+
+  if (error || !data) redirect("/flashcards");
+
+  redirect(`/flashcards/review?session=${data.id}`);
+}
+
 export type GradeFlashcardResult = {
   error: string | null;
   stage: StageLabel;
