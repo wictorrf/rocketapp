@@ -9,7 +9,7 @@ const STATUS_LABEL = { available: "Disponível", used: "Usado", expired: "Expira
 export default async function VerificationCodesAdminPage() {
   const profile = await getCurrentUserProfile();
   if (!profile) redirect("/login");
-  if (!profile.isAdmin) redirect("/home");
+  if (!profile.isAdmin) redirect("/dashboard");
 
   const codes = await listVerificationCodes();
 

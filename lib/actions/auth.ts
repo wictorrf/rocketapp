@@ -103,7 +103,7 @@ export async function logInAction(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: "E-mail ou senha incorretos." };
 
-  redirect("/home");
+  redirect("/dashboard");
 }
 
 export async function logOutAction() {

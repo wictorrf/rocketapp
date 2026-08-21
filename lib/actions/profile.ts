@@ -80,7 +80,7 @@ export async function saveOnboardingAction(
     .eq("id", user.id);
   if (profileError) return { error: "Não foi possível concluir o onboarding." };
 
-  redirect("/home");
+  redirect("/dashboard");
 }
 
 export async function skipOnboardingAction() {
@@ -95,7 +95,7 @@ export async function skipOnboardingAction() {
     .update({ onboarding_completed_at: new Date().toISOString() })
     .eq("id", user.id);
 
-  redirect("/home");
+  redirect("/dashboard");
 }
 
 // Igual a savePersonalizeAction, mas pra edição em Meu Perfil — fica na
@@ -143,7 +143,7 @@ export async function updateProfileAction(
   if (error) return { error: "Não foi possível salvar seu perfil. Tente novamente." };
 
   revalidatePath("/profile");
-  revalidatePath("/home");
+  revalidatePath("/dashboard");
   return { error: null };
 }
 

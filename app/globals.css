@@ -5,21 +5,24 @@
    ========================================================================== */
 
 :root {
-  --ice: #eef2f1;
+  --ice: #f5f7f6;
   --ice-dim: #e2e8e6;
-  --wine: #6e1e33;
+  --wine: #68162e;
   --wine-bright: #8c2846;
-  --wine-deep: #4e1524;
-  --pink: #f2a6c1;
-  --pink-soft: #fbe3ec;
+  --wine-deep: #551126;
+  --pink: #e1648c;
+  --pink-soft: #f8e6ec;
   --coal: #17181a;
   --coal-soft: #24262a;
   --white: #ffffff;
-  --text: #1f2023;
-  --text-muted: #6b6f76;
-  --line: #e1e5e4;
-  --green: #4c8b6e;
-  --amber: #c98a2c;
+  --text: #101522;
+  --text-muted: #667085;
+  --line: #e6e8ea;
+  --green: #4d9a68;
+  --amber: #d8952c;
+  --red-soft: #c94f68;
+  --blue-academic: #4c86c6;
+  --lavender: #eee8fa;
   --green-deep: #1f3d2e;
   --amber-deep: #4a3110;
   --radius-lg: 20px;
@@ -29,8 +32,8 @@
   --shadow-lift: 0 14px 34px rgba(23, 24, 26, 0.12);
 
   /* Mapeadas para as variáveis geradas pelo next/font/google em app/layout.tsx */
-  --font-display: var(--font-fraunces), serif;
-  --font-body: var(--font-nunito), sans-serif;
+  --font-display: var(--font-playfair), serif;
+  --font-body: var(--font-inter), sans-serif;
   --font-mono: var(--font-plex-mono), monospace;
   --font-script: var(--font-dancing-script), cursive;
 }
@@ -1091,6 +1094,70 @@ h2.section-title {
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
 }
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sidebar-collapse-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.sidebar-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+.sidebar.collapsed {
+  padding: 28px 14px;
+}
+.sidebar.collapsed .sidebar-head {
+  flex-direction: column;
+  gap: 14px;
+}
+.sidebar.collapsed .nav a,
+.sidebar.collapsed .streak-mini,
+.sidebar.collapsed .sidebar-logout {
+  justify-content: center;
+}
+.sidebar.collapsed .label {
+  display: none;
+}
+.sidebar.collapsed .nav a {
+  position: relative;
+}
+.sidebar.collapsed .nav a:hover::after,
+.sidebar.collapsed .nav a:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 10px;
+  background: var(--coal);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: var(--shadow-lift);
+  z-index: 50;
+  pointer-events: none;
+}
+.app:has(.sidebar.collapsed) {
+  grid-template-columns: 84px 1fr;
+}
 .main {
   padding: 0;
 }
@@ -1101,6 +1168,25 @@ h2.section-title {
   padding: 20px 34px;
   background: var(--white);
   border-bottom: 1px solid var(--line);
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.menu-trigger {
+  display: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  background: var(--ice);
+  color: var(--text);
+  border: none;
+  cursor: pointer;
+  font-size: 17px;
+  flex-shrink: 0;
 }
 .topbar h1 {
   font-family: var(--font-display);
@@ -1215,8 +1301,10 @@ h2.section-title {
   gap: 20px;
 }
 .hero-greet .script {
-  font-family: var(--font-script);
-  font-size: 22px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 20px;
   color: var(--pink);
   display: block;
   margin-bottom: 2px;
@@ -2092,6 +2180,9 @@ h2.section-title {
   .landing-copy h1 {
     font-size: 32px;
   }
+  .menu-trigger {
+    display: flex;
+  }
   .app {
     grid-template-columns: 1fr;
   }
@@ -2110,37 +2201,50 @@ h2.section-title {
   }
 }
 
-/* ---------- navegação mobile (substitui a sidebar em <900px) ---------- */
-.mobile-nav {
+/* ---------- gaveta de navegação mobile (substitui a sidebar em <900px) ---------- */
+.mobile-nav-backdrop {
+  display: none;
+}
+.mobile-drawer {
   display: none;
 }
 @media (max-width: 900px) {
-  .mobile-nav {
-    display: flex;
+  .mobile-nav-backdrop {
+    display: block;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-    background: var(--wine-deep);
-    padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
-    justify-content: space-around;
+    inset: 0;
+    background: rgba(23, 24, 26, 0.5);
+    border: none;
+    padding: 0;
+    margin: 0;
+    z-index: 199;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
   }
-  .mobile-nav a {
+  .mobile-nav-backdrop.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .mobile-drawer {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 10px;
-    font-weight: 700;
-    padding: 4px 6px;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 78vw;
+    max-width: 300px;
+    background: var(--wine-deep);
+    padding: 28px 20px calc(20px + env(safe-area-inset-bottom));
+    gap: 34px;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    overflow-y: auto;
   }
-  .mobile-nav a.active {
-    color: var(--pink);
-  }
-  .mobile-nav a .ic {
-    font-size: 17px;
+  .mobile-drawer.open {
+    transform: translateX(0);
   }
 }
 

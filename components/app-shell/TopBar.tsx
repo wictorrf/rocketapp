@@ -8,16 +8,28 @@ export function TopBar({
   displayName,
   areaLabel,
   photoUrl,
+  onMenuClick,
 }: {
   displayName: string;
   areaLabel: string;
   photoUrl: string | null;
+  onMenuClick: () => void;
 }) {
   const pathname = usePathname();
 
   return (
     <div className="topbar">
-      <h1>{titleForPath(pathname)}</h1>
+      <div className="topbar-left">
+        <button
+          type="button"
+          className="menu-trigger"
+          onClick={onMenuClick}
+          aria-label="Abrir menu"
+        >
+          ☰
+        </button>
+        <h1>{titleForPath(pathname)}</h1>
+      </div>
       <div className="topbar-right">
         <Link href="/profile" className="profile-chip">
           {photoUrl ? (

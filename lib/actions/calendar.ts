@@ -69,7 +69,7 @@ export async function createCalendarTaskAction(
   }
 
   revalidatePath("/calendar");
-  revalidatePath("/home");
+  revalidatePath("/dashboard");
   return { error: null };
 }
 
@@ -119,7 +119,7 @@ export async function saveMonthlyPlanAction(
   if (error) return { error: "Não foi possível salvar o planejamento. Tente novamente." };
 
   revalidatePath("/calendar");
-  revalidatePath("/home");
+  revalidatePath("/dashboard");
   return { error: null };
 }
 
@@ -171,6 +171,6 @@ export async function toggleTaskStatusAction(taskId: string, done: boolean) {
     .eq("id", taskId)
     .eq("user_id", user.id);
 
-  revalidatePath("/home");
+  revalidatePath("/dashboard");
   revalidatePath("/calendar");
 }

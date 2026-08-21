@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/queries/profile";
 import { computeStreak } from "@/lib/queries/streak";
-import { Sidebar } from "@/components/app-shell/Sidebar";
-import { TopBar } from "@/components/app-shell/TopBar";
-import { MobileNav } from "@/components/app-shell/MobileNav";
+import { AppShell } from "@/components/app-shell/AppShell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentUserProfile();
@@ -13,17 +11,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const streak = await computeStreak(profile.userId);
 
   return (
-    <div className="app">
-      <Sidebar streak={streak} isAdmin={profile.isAdmin} />
-      <div className="main">
-        <TopBar
-          displayName={profile.displayName}
-          areaLabel={profile.areaLabel}
-          photoUrl={profile.photoUrl}
-        />
-        <div className="content">{children}</div>
-      </div>
-      <MobileNav />
-    </div>
+    <AppShell
+      streak={streak}
+      isAdmin={profile.isAdmin}
+      displayName={profile.displayName}
+      areaLabel={profile.areaLabel}
+      photoUrl={profile.photoUrl}
+    >
+      {children}
+    </AppShell>
   );
 }

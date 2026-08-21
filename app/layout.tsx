@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import { Fraunces, Nunito, IBM_Plex_Mono, Dancing_Script } from "next/font/google";
+import { Playfair_Display, Inter, IBM_Plex_Mono, Dancing_Script } from "next/font/google";
 import { RocketIconSprite } from "@/components/ui/RocketIcon";
 import "./globals.css";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair",
   subsets: ["latin"],
   style: ["normal", "italic"],
   weight: ["400", "500", "600", "700"],
 });
 
-const nunito = Nunito({
-  variable: "--font-nunito",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
 });
@@ -38,7 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`${fraunces.variable} ${nunito.variable} ${plexMono.variable} ${dancingScript.variable}`}
+      className={`${playfairDisplay.variable} ${inter.variable} ${plexMono.variable} ${dancingScript.variable}`}
     >
       <body>
         <RocketIconSprite />

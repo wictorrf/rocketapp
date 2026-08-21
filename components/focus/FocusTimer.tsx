@@ -168,7 +168,7 @@ export function FocusTimer({
   if (options.length === 0) {
     return (
       <div className="focus-screen">
-        <Link href="/home" className="focus-back" aria-label="Voltar">
+        <Link href="/dashboard" className="focus-back" aria-label="Voltar">
           ‹
         </Link>
         <p style={{ color: "rgba(255,255,255,0.7)", textAlign: "center", maxWidth: 320 }}>
@@ -191,7 +191,7 @@ export function FocusTimer({
         <p style={{ color: "rgba(255,255,255,0.7)", marginBottom: 24 }}>
           {Math.round(elapsedSeconds / 60)} minutos registrados.
         </p>
-        <Link href="/home" className="btn btn-pink">
+        <Link href="/dashboard" className="btn btn-pink">
           Voltar para a Home
         </Link>
       </div>
@@ -203,7 +203,7 @@ export function FocusTimer({
 
   return (
     <div className={`focus-screen ${phaseClass}`}>
-      <Link href="/home" className="focus-back" aria-label="Voltar">
+      <Link href="/dashboard" className="focus-back" aria-label="Voltar">
         ‹
       </Link>
 

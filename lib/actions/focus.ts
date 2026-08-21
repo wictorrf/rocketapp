@@ -47,6 +47,6 @@ export async function finishFocusSessionAction(
     })
     .eq("id", sessionId);
 
-  revalidatePath("/home");
+  revalidatePath("/dashboard");
   revalidatePath("/metrics");
 }

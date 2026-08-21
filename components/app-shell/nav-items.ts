@@ -1,5 +1,5 @@
 export const NAV_ITEMS = [
-  { href: "/home", icon: "⌂", label: "Home" },
+  { href: "/dashboard", icon: "⌂", label: "Dashboard" },
   { href: "/calendar", icon: "▦", label: "Calendário" },
   { href: "/metrics", icon: "▤", label: "Métricas" },
   { href: "/subjects", icon: "▥", label: "Disciplinas" },
@@ -9,7 +9,7 @@ export const NAV_ITEMS = [
 
 // Mapeia prefixo de rota → título mostrado no topbar (h1).
 export const ROUTE_TITLES: { prefix: string; title: string }[] = [
-  { prefix: "/home", title: "Painel de Voo" },
+  { prefix: "/dashboard", title: "Dashboard" },
   { prefix: "/calendar", title: "Calendário" },
   { prefix: "/metrics", title: "Métricas" },
   { prefix: "/subjects", title: "Disciplinas" },
