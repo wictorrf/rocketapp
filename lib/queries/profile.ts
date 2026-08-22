@@ -9,6 +9,7 @@ export type CurrentUserProfile = {
   photoUrl: string | null;
   onboardingCompleted: boolean;
   isAdmin: boolean;
+  dailyGoalMinutes: number;
 };
 
 // Usado no layout de (app): se não houver sessão ou perfil, quem chama decide
@@ -22,7 +23,7 @@ export async function getCurrentUserProfile(): Promise<CurrentUserProfile | null
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, photo_url, area, onboarding_completed_at, is_admin")
+    .select("full_name, photo_url, area, onboarding_completed_at, is_admin, daily_goal_minutes")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -35,6 +36,7 @@ export async function getCurrentUserProfile(): Promise<CurrentUserProfile | null
     photoUrl,
     onboardingCompleted: Boolean(profile?.onboarding_completed_at),
     isAdmin: Boolean(profile?.is_admin),
+    dailyGoalMinutes: profile?.daily_goal_minutes ?? 120,
   };
 }
 
@@ -43,6 +45,7 @@ export type ProfileForEdit = {
   fullName: string;
   area: Area;
   photoUrl: string | null;
+  dailyGoalMinutes: number;
 };
 
 // Dados crus (não formatados pra exibição) usados no formulário de edição
@@ -56,7 +59,7 @@ export async function getProfileForEdit(): Promise<ProfileForEdit | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, photo_url, area")
+    .select("full_name, photo_url, area, daily_goal_minutes")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -67,5 +70,6 @@ export async function getProfileForEdit(): Promise<ProfileForEdit | null> {
     fullName: profile?.full_name ?? "",
     area: (profile?.area as Area) ?? "medicina",
     photoUrl,
+    dailyGoalMinutes: profile?.daily_goal_minutes ?? 120,
   };
 }

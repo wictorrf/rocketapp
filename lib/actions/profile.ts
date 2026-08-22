@@ -113,6 +113,10 @@ export async function updateProfileAction(
   const fullName = String(formData.get("fullName") ?? "").trim();
   const area = String(formData.get("area") ?? "") as Area;
   const photo = formData.get("photo");
+  const dailyGoalMinutesRaw = Number(formData.get("dailyGoalMinutes"));
+  const dailyGoalMinutes = Number.isFinite(dailyGoalMinutesRaw)
+    ? Math.min(960, Math.max(15, Math.round(dailyGoalMinutesRaw)))
+    : 120;
 
   if (!fullName || !area) {
     return { error: "Preencha todos os campos." };
@@ -136,6 +140,7 @@ export async function updateProfileAction(
     .update({
       full_name: fullName,
       area,
+      daily_goal_minutes: dailyGoalMinutes,
       ...(photoPath ? { photo_url: photoPath } : {}),
     })
     .eq("id", user.id);
@@ -144,6 +149,7 @@ export async function updateProfileAction(
 
   revalidatePath("/profile");
   revalidatePath("/dashboard");
+  revalidatePath("/focus");
   return { error: null };
 }
 

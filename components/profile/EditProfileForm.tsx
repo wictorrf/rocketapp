@@ -13,6 +13,7 @@ export function EditProfileForm({ profile }: { profile: ProfileForEdit }) {
   const [fullName, setFullName] = useState(profile.fullName);
   const [area, setArea] = useState<Area>(profile.area);
   const [photoPreview, setPhotoPreview] = useState<string | null>(profile.photoUrl);
+  const [dailyGoalMinutes, setDailyGoalMinutes] = useState(profile.dailyGoalMinutes);
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -71,6 +72,20 @@ export function EditProfileForm({ profile }: { profile: ProfileForEdit }) {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="dailyGoalMinutes">Meta diária de estudo (minutos)</label>
+          <input
+            id="dailyGoalMinutes"
+            name="dailyGoalMinutes"
+            type="number"
+            min={15}
+            max={960}
+            step={15}
+            value={dailyGoalMinutes}
+            onChange={(e) => setDailyGoalMinutes(Number(e.target.value))}
+          />
         </div>
 
         {state.error && <p className="error-text">{state.error}</p>}

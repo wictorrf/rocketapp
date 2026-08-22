@@ -2307,7 +2307,7 @@ h2.section-title {
 /* ---------- focus mode timer ---------- */
 .focus-screen {
   min-height: 100vh;
-  background: var(--wine-deep);
+  background: #68162e;
   background-image:
     radial-gradient(circle at 15% 15%, rgba(242, 166, 193, 0.12), transparent 35%),
     radial-gradient(circle at 85% 85%, rgba(242, 166, 193, 0.1), transparent 40%);
@@ -2320,17 +2320,17 @@ h2.section-title {
   position: relative;
   transition: background-color 0.6s ease;
 }
-.focus-screen.phase-break {
-  background: var(--green-deep);
+.focus-screen.phase-descanso {
+  background: #2f6f5e;
   background-image:
-    radial-gradient(circle at 15% 15%, rgba(76, 139, 110, 0.22), transparent 35%),
-    radial-gradient(circle at 85% 85%, rgba(76, 139, 110, 0.18), transparent 40%);
+    radial-gradient(circle at 15% 15%, rgba(90, 168, 143, 0.22), transparent 35%),
+    radial-gradient(circle at 85% 85%, rgba(90, 168, 143, 0.18), transparent 40%);
 }
 .focus-screen.phase-simulado {
-  background: var(--amber-deep);
+  background: #3f5278;
   background-image:
-    radial-gradient(circle at 15% 15%, rgba(201, 138, 44, 0.22), transparent 35%),
-    radial-gradient(circle at 85% 85%, rgba(201, 138, 44, 0.18), transparent 40%);
+    radial-gradient(circle at 15% 15%, rgba(120, 142, 190, 0.22), transparent 35%),
+    radial-gradient(circle at 85% 85%, rgba(120, 142, 190, 0.18), transparent 40%);
 }
 .focus-back {
   position: absolute;
@@ -2346,6 +2346,19 @@ h2.section-title {
   cursor: pointer;
   color: #fff;
   border: none;
+}
+.focus-history-link {
+  position: absolute;
+  top: 26px;
+  right: 26px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 9px 18px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12.5px;
+  text-decoration: none;
 }
 .focus-tag-select {
   background: rgba(255, 255, 255, 0.1);
@@ -2483,6 +2496,148 @@ h2.section-title {
 .fc-btn.secondary {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
+}
+.fc-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* .btn-ghost foi desenhado pra fundo claro (texto/borda cor --wine) — nos
+   fundos coloridos do cronômetro (foco = mesma cor --wine!) isso fica
+   invisível. Recupera contraste aqui; dentro do modal branco (.modal-box)
+   o estilo original continua correto. */
+.focus-screen .btn-ghost {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.focus-screen .modal-box .btn-ghost {
+  color: var(--wine);
+  border-color: var(--wine);
+}
+/* mesmo problema de contraste do .btn-ghost acima, agora pro texto de erro
+   (--wine-bright é próximo demais do fundo da fase foco). */
+.focus-screen .error-text {
+  color: #ffb4c6;
+}
+.focus-screen .modal-box .error-text {
+  color: var(--wine-bright);
+}
+.focus-plain-input {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  text-align: center;
+}
+.focus-plain-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+.focus-compact-tag {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 18px;
+  text-align: center;
+}
+.focus-cycle-dots {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.focus-cycle-dots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: block;
+}
+.focus-cycle-dots span.done {
+  background: var(--pink);
+}
+.focus-toggles {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+.ft-toggle {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+.ft-toggle.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+.focus-conclusion-card {
+  max-width: 380px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.focus-conclusion-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+.focus-conclusion-body {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+.focus-conclusion-stat {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 26px;
+}
+.focus-summary-box {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 30px 34px;
+  max-width: 420px;
+  width: 100%;
+}
+.focus-summary-box .fs-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 18px;
+  text-align: center;
+}
+.focus-summary-box .fs-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.focus-summary-box .fs-grid > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+}
+.focus-summary-box .fs-grid span {
+  color: rgba(255, 255, 255, 0.6);
+}
+.focus-summary-box .field {
+  margin-bottom: 14px;
+}
+.focus-summary-box .field label {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* ---------- flashcards: subject detail ---------- */
@@ -3327,6 +3482,7 @@ h2.section-title {
 }
 .modal-box {
   background: var(--white);
+  color: var(--text);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lift);
   width: 100%;

@@ -1,16 +1,24 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/queries/profile";
-import { listSubjectTopicOptions, getTodayFocusMinutes, DAILY_GOAL_MINUTES } from "@/lib/queries/focus";
+import { listSubjectTopicOptions, getActiveFocusSession, getTodayNetMinutes } from "@/lib/queries/focus";
 import { FocusTimer } from "@/components/focus/FocusTimer";
 
 export default async function FocusPage() {
   const profile = await getCurrentUserProfile();
   if (!profile) redirect("/login");
 
-  const [options, todayMinutes] = await Promise.all([
+  const [options, activeSession, todayMinutesFromFinished] = await Promise.all([
     listSubjectTopicOptions(profile.userId),
-    getTodayFocusMinutes(profile.userId),
+    getActiveFocusSession(profile.userId),
+    getTodayNetMinutes(profile.userId),
   ]);
 
-  return <FocusTimer options={options} todayMinutes={todayMinutes} dailyGoalMinutes={DAILY_GOAL_MINUTES} />;
+  return (
+    <FocusTimer
+      options={options}
+      initialSession={activeSession}
+      todayMinutesFromFinished={todayMinutesFromFinished}
+      dailyGoalMinutes={profile.dailyGoalMinutes}
+    />
+  );
 }
