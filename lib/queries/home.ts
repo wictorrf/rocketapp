@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { toLocalDateKey } from "@/lib/utils/format";
+import { Rating } from "@/lib/srs/fsrs";
 
 const WEEKDAY_LETTERS_PT = ["S", "T", "Q", "Q", "S", "S", "D"]; // Seg..Dom
 
@@ -17,13 +18,14 @@ export type PriorityTask = {
 // devidos), desempatando pelo mais atrasado.
 export async function getPriorityTask(userId: string): Promise<PriorityTask | null> {
   const supabase = await createClient();
-  const todayKey = toLocalDateKey(new Date());
+  const nowIso = new Date().toISOString();
 
   const { data: due } = await supabase
     .from("flashcards")
-    .select("id, topic_id, flashcard_srs_state!inner(due_at)")
+    .select("id, topic_id, flashcard_srs_state!inner(due_at, suspended_at)")
     .eq("user_id", userId)
-    .lte("flashcard_srs_state.due_at", todayKey);
+    .is("flashcard_srs_state.suspended_at", null)
+    .lte("flashcard_srs_state.due_at", nowIso);
 
   if (!due?.length) return null;
 
@@ -42,7 +44,7 @@ export async function getPriorityTask(userId: string): Promise<PriorityTask | nu
   const dueAtByFlashcard = new Map(
     due.map((d) => {
       const srs = Array.isArray(d.flashcard_srs_state) ? d.flashcard_srs_state[0] : d.flashcard_srs_state;
-      return [d.id, srs?.due_at ?? todayKey];
+      return [d.id, srs?.due_at ?? nowIso];
     }),
   );
 
@@ -51,7 +53,7 @@ export async function getPriorityTask(userId: string): Promise<PriorityTask | nu
   const dueFlashcardIds = due.map((d) => d.id);
   const { data: logs } = await supabase
     .from("review_logs")
-    .select("flashcard_id, grade")
+    .select("flashcard_id, rating")
     .in("flashcard_id", dueFlashcardIds)
     .gte("reviewed_at", fourteenDaysAgo.toISOString());
 
@@ -62,12 +64,12 @@ export async function getPriorityTask(userId: string): Promise<PriorityTask | nu
   for (const d of due) {
     const stat = topicStats.get(d.topic_id) ?? {
       count: 0,
-      oldestDueAt: dueAtByFlashcard.get(d.id) ?? todayKey,
+      oldestDueAt: dueAtByFlashcard.get(d.id) ?? nowIso,
       remembered: 0,
       total: 0,
     };
     stat.count += 1;
-    const dueAt = dueAtByFlashcard.get(d.id) ?? todayKey;
+    const dueAt = dueAtByFlashcard.get(d.id) ?? nowIso;
     if (dueAt < stat.oldestDueAt) stat.oldestDueAt = dueAt;
     topicStats.set(d.topic_id, stat);
   }
@@ -77,7 +79,7 @@ export async function getPriorityTask(userId: string): Promise<PriorityTask | nu
     const stat = topicStats.get(topicId);
     if (!stat) continue;
     stat.total += 1;
-    if (log.grade > 0) stat.remembered += 1;
+    if (log.rating > Rating.Again) stat.remembered += 1;
   }
 
   let best: { topicId: string; accuracy: number; oldestDueAt: string } | null = null;
@@ -123,7 +125,7 @@ export async function getPerformanceDropInsight(userId: string): Promise<Perform
 
   const { data: logs } = await supabase
     .from("review_logs")
-    .select("flashcard_id, grade, reviewed_at")
+    .select("flashcard_id, rating, reviewed_at")
     .eq("user_id", userId)
     .gte("reviewed_at", since28.toISOString());
   if (!logs?.length) return null;
@@ -164,10 +166,10 @@ export async function getPerformanceDropInsight(userId: string): Promise<Perform
     const isRecent = new Date(log.reviewed_at) >= fourteenDaysAgo;
     if (isRecent) {
       stat.recentTotal += 1;
-      if (log.grade > 0) stat.recentRemembered += 1;
+      if (log.rating > Rating.Again) stat.recentRemembered += 1;
     } else {
       stat.olderTotal += 1;
-      if (log.grade > 0) stat.olderRemembered += 1;
+      if (log.rating > Rating.Again) stat.olderRemembered += 1;
     }
     bySubject.set(subjectId, stat);
   }
@@ -300,9 +302,10 @@ export async function getTodayTasks(userId: string): Promise<TodayTask[]> {
 
   const { data: due } = await supabase
     .from("flashcards")
-    .select("id, topic_id, flashcard_srs_state!inner(due_at)")
+    .select("id, topic_id, flashcard_srs_state!inner(due_at, suspended_at)")
     .eq("user_id", userId)
-    .lte("flashcard_srs_state.due_at", todayKey);
+    .is("flashcard_srs_state.suspended_at", null)
+    .lte("flashcard_srs_state.due_at", new Date().toISOString());
 
   if (due?.length) {
     const topicIds = [...new Set(due.map((d) => d.topic_id))];

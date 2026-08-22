@@ -1,6 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import { deriveStageLabel, type StageLabel } from "@/lib/srs/sm2";
-import { toLocalDateKey } from "@/lib/utils/format";
+import {
+  State,
+  deriveStageLabel,
+  isConsolidated,
+  needsReinforcement,
+  retrievability,
+  type StageLabel,
+  type StoredSrsState,
+} from "@/lib/srs/fsrs";
 
 export type TopicStatusFilter = "all" | "active" | "archived" | "pending" | "with_questions";
 export type TopicSortKey =
@@ -67,13 +74,15 @@ export async function listTopicsForSubject(
   }
   const flashcardIds = (flashcards ?? []).map((f) => f.id);
 
-  const todayKey = toLocalDateKey(new Date());
+  const nowIso = new Date().toISOString();
   const { data: srsStates } = flashcardIds.length
     ? await supabase
         .from("flashcard_srs_state")
-        .select("flashcard_id, due_at, last_reviewed_at")
+        .select("flashcard_id, due_at, last_review_at, suspended_at")
         .in("flashcard_id", flashcardIds)
-    : { data: [] as { flashcard_id: string; due_at: string; last_reviewed_at: string | null }[] };
+    : {
+        data: [] as { flashcard_id: string; due_at: string; last_review_at: string | null; suspended_at: string | null }[],
+      };
   const srsByFlashcard = new Map((srsStates ?? []).map((s) => [s.flashcard_id, s]));
 
   const { data: questionLogs } = await supabase
@@ -91,9 +100,10 @@ export async function listTopicsForSubject(
     const states = ids.map((id) => srsByFlashcard.get(id)).filter(Boolean) as NonNullable<
       ReturnType<typeof srsByFlashcard.get>
     >[];
-    const pendingReviewsCount = states.filter((s) => s.due_at <= todayKey).length;
+    const activeStates = states.filter((s) => !s.suspended_at);
+    const pendingReviewsCount = activeStates.filter((s) => s.due_at <= nowIso).length;
     const lastReviewedAt = states
-      .map((s) => s.last_reviewed_at)
+      .map((s) => s.last_review_at)
       .filter((d): d is string => Boolean(d))
       .sort()
       .at(-1) ?? null;
@@ -245,27 +255,39 @@ export async function listOtherActiveTopicsForUser(userId: string, excludeTopicI
   }));
 }
 
-export type FlashcardWithStage = {
+export type FlashcardWithState = {
   id: string;
   front: string;
   back: string;
   imageUrl: string | null;
+  backImageUrl: string | null;
+  tags: string[];
   stage: StageLabel;
+  suspended: boolean;
   dueAt: string;
-  lastReviewedAt: string | null;
-  intervalDays: number;
+  lastReviewAt: string | null;
+  stability: number;
+  difficulty: number;
+  reps: number;
+  lapses: number;
+  retrievability: number;
+  consolidated: boolean;
+  needsReinforcement: boolean;
 };
 
 export type TopicPanel = {
-  totalFlashcards: number;
+  totalFlashcards: number; // não suspensos
   reviewedAtLeastOnce: number;
   novoCount: number;
   aprendendoCount: number;
-  consolidadoCount: number;
+  revisaoCount: number;
+  reaprendizagemCount: number;
+  suspensoCount: number;
   dueTodayCount: number;
   studiedMinutes: number;
-  needsReview: FlashcardWithStage[]; // novo/aprendendo, atrasados primeiro
-  consolidated: FlashcardWithStage[];
+  needsReview: FlashcardWithState[]; // atrasados/hoje + precisam de reforço, não suspensos
+  consolidated: FlashcardWithState[];
+  all: FlashcardWithState[]; // inclui suspensos — "Todos os flashcards deste assunto"
 };
 
 export async function getTopicPanel(topicId: string): Promise<TopicPanel> {
@@ -273,7 +295,9 @@ export async function getTopicPanel(topicId: string): Promise<TopicPanel> {
 
   const { data: flashcards } = await supabase
     .from("flashcards")
-    .select("id, front, back, image_url, flashcard_srs_state(repetitions, interval_days, due_at, last_reviewed_at)")
+    .select(
+      "id, front, back, image_url, back_image_url, tags, flashcard_srs_state(state, due_at, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, last_review_at, suspended_at)",
+    )
     .eq("topic_id", topicId)
     .order("created_at");
 
@@ -283,36 +307,63 @@ export async function getTopicPanel(topicId: string): Promise<TopicPanel> {
     .eq("topic_id", topicId);
   const studiedMinutes = (focusSessions ?? []).reduce((sum, f) => sum + (f.actual_minutes ?? 0), 0);
 
-  const todayKey = toLocalDateKey(new Date());
+  const now = new Date();
+  const nowIso = now.toISOString();
 
-  const withStage: FlashcardWithStage[] = (flashcards ?? []).map((f) => {
+  const withState: FlashcardWithState[] = (flashcards ?? []).map((f) => {
     const srs = Array.isArray(f.flashcard_srs_state) ? f.flashcard_srs_state[0] : f.flashcard_srs_state;
+    const suspended = Boolean(srs?.suspended_at);
+    const stored: StoredSrsState = {
+      state: (srs?.state ?? State.New) as State,
+      dueAt: srs?.due_at ?? nowIso,
+      stability: srs?.stability ?? 0,
+      difficulty: srs?.difficulty ?? 0,
+      elapsedDays: srs?.elapsed_days ?? 0,
+      scheduledDays: srs?.scheduled_days ?? 0,
+      learningSteps: srs?.learning_steps ?? 0,
+      reps: srs?.reps ?? 0,
+      lapses: srs?.lapses ?? 0,
+      lastReviewAt: srs?.last_review_at ?? null,
+    };
     return {
       id: f.id,
       front: f.front,
       back: f.back,
       imageUrl: f.image_url,
-      stage: deriveStageLabel({ repetitions: srs?.repetitions ?? 0, intervalDays: srs?.interval_days ?? 0 }),
-      dueAt: srs?.due_at ?? todayKey,
-      lastReviewedAt: srs?.last_reviewed_at ?? null,
-      intervalDays: srs?.interval_days ?? 0,
+      backImageUrl: f.back_image_url,
+      tags: (f.tags as string[] | null) ?? [],
+      stage: deriveStageLabel(stored.state, suspended),
+      suspended,
+      dueAt: stored.dueAt,
+      lastReviewAt: stored.lastReviewAt,
+      stability: stored.stability,
+      difficulty: stored.difficulty,
+      reps: stored.reps,
+      lapses: stored.lapses,
+      retrievability: retrievability(stored, now),
+      consolidated: isConsolidated(stored.state, stored.stability, suspended),
+      needsReinforcement: needsReinforcement(stored, suspended, now),
     };
   });
 
-  const needsReview = withStage
-    .filter((f) => f.stage !== "consolidado")
+  const active = withState.filter((f) => !f.suspended);
+  const needsReview = active
+    .filter((f) => f.dueAt <= nowIso || f.needsReinforcement)
     .sort((a, b) => a.dueAt.localeCompare(b.dueAt));
-  const consolidated = withStage.filter((f) => f.stage === "consolidado");
+  const consolidated = active.filter((f) => f.consolidated);
 
   return {
-    totalFlashcards: withStage.length,
-    reviewedAtLeastOnce: withStage.filter((f) => f.lastReviewedAt).length,
-    novoCount: withStage.filter((f) => f.stage === "novo").length,
-    aprendendoCount: withStage.filter((f) => f.stage === "aprendendo").length,
-    consolidadoCount: consolidated.length,
-    dueTodayCount: withStage.filter((f) => f.dueAt <= todayKey).length,
+    totalFlashcards: active.length,
+    reviewedAtLeastOnce: withState.filter((f) => f.reps > 0).length,
+    novoCount: active.filter((f) => f.stage === "novo").length,
+    aprendendoCount: active.filter((f) => f.stage === "aprendendo").length,
+    revisaoCount: active.filter((f) => f.stage === "revisao").length,
+    reaprendizagemCount: active.filter((f) => f.stage === "reaprendizagem").length,
+    suspensoCount: withState.filter((f) => f.suspended).length,
+    dueTodayCount: active.filter((f) => f.dueAt <= nowIso).length,
     studiedMinutes,
     needsReview,
     consolidated,
+    all: withState,
   };
 }

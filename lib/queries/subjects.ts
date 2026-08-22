@@ -71,13 +71,15 @@ export async function listSubjectsWithSummary(
   );
   const flashcardIds = (flashcards ?? []).map((f) => f.id);
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const nowIso = new Date().toISOString();
   const { data: srsStates } = flashcardIds.length
     ? await supabase
         .from("flashcard_srs_state")
-        .select("flashcard_id, due_at, last_reviewed_at")
+        .select("flashcard_id, due_at, last_review_at, suspended_at")
         .in("flashcard_id", flashcardIds)
-    : { data: [] as { flashcard_id: string; due_at: string; last_reviewed_at: string | null }[] };
+    : {
+        data: [] as { flashcard_id: string; due_at: string; last_review_at: string | null; suspended_at: string | null }[],
+      };
 
   const { data: questionLogs } = await supabase
     .from("question_logs")
@@ -100,9 +102,9 @@ export async function listSubjectsWithSummary(
     );
 
     const subjectSrsStates = (srsStates ?? []).filter((s) => subjectFlashcardIds.has(s.flashcard_id));
-    const pendingReviewsCount = subjectSrsStates.filter((s) => s.due_at <= todayKey).length;
+    const pendingReviewsCount = subjectSrsStates.filter((s) => !s.suspended_at && s.due_at <= nowIso).length;
     const lastReviewedAt = subjectSrsStates
-      .map((s) => s.last_reviewed_at)
+      .map((s) => s.last_review_at)
       .filter((d): d is string => Boolean(d))
       .sort()
       .at(-1) ?? null;
@@ -226,14 +228,10 @@ export async function getSubjectDeletionImpact(subjectId: string) {
   };
 }
 
-export async function listActiveSubjectsForMove(userId: string, excludeId: string) {
+export async function listActiveSubjectsForMove(userId: string, excludeId?: string) {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("subjects")
-    .select("id, name, icon")
-    .eq("user_id", userId)
-    .is("archived_at", null)
-    .neq("id", excludeId)
-    .order("name");
+  let query = supabase.from("subjects").select("id, name, icon").eq("user_id", userId).is("archived_at", null);
+  if (excludeId) query = query.neq("id", excludeId);
+  const { data } = await query.order("name");
   return data ?? [];
 }

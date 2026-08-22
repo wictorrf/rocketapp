@@ -1,123 +1,231 @@
 "use client";
 
-import { useId, useState } from "react";
-import { RichText } from "@/components/ui/RichText";
-import { COLOR_SWATCHES } from "@/lib/constants/calendar";
-import type { TextHighlight } from "@/lib/utils/rich-text";
+import { useEffect, useId, useRef, useState } from "react";
+import { EDITOR_TEXT_COLORS, EDITOR_HIGHLIGHT_COLORS } from "@/lib/constants/editor-colors";
+import { sanitizeFlashcardHtml } from "@/lib/utils/sanitize-html";
 
+// Editor de texto rico via contentEditable + document.execCommand. A API é
+// tecnicamente depreciada nas specs, mas continua implementada e estável em
+// todos os navegadores atuais — pra um campo de frente/verso de flashcard,
+// isso evita puxar uma biblioteca de editor inteira (Tiptap/Slate) só pra
+// negrito/itálico/listas/cores.
 export function RichTextEditor({
   name,
   label,
   placeholder,
-  rows = 3,
   required = false,
+  defaultValue = "",
 }: {
   name: string;
   label: string;
   placeholder?: string;
-  rows?: number;
   required?: boolean;
+  defaultValue?: string;
 }) {
   const id = useId();
-  const [text, setText] = useState("");
-  const [highlights, setHighlights] = useState<TextHighlight[]>([]);
-  const [draftPhrase, setDraftPhrase] = useState("");
-  const [draftBold, setDraftBold] = useState(false);
-  const [draftItalic, setDraftItalic] = useState(false);
-  const [draftColor, setDraftColor] = useState<string | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const hiddenRef = useRef<HTMLInputElement>(null);
+  const [isEmpty, setIsEmpty] = useState(!defaultValue.trim());
+  const [textColorOpen, setTextColorOpen] = useState(false);
+  const [highlightOpen, setHighlightOpen] = useState(false);
 
-  function addHighlight() {
-    const phrase = draftPhrase.trim();
-    if (!phrase) return;
-    setHighlights((prev) => [
-      ...prev,
-      { phrase, bold: draftBold || undefined, italic: draftItalic || undefined, color: draftColor || undefined },
-    ]);
-    setDraftPhrase("");
+  function syncHidden() {
+    const editor = editorRef.current;
+    const hidden = hiddenRef.current;
+    if (!editor || !hidden) return;
+    hidden.value = editor.innerHTML;
+    setIsEmpty((editor.textContent ?? "").trim().length === 0);
   }
 
-  function removeHighlight(index: number) {
-    setHighlights((prev) => prev.filter((_, i) => i !== index));
+  // Fonte da verdade no momento do envio: o evento nativo `formdata` dispara
+  // bem quando o form vai virar FormData (submit real ou Server Action), e
+  // sobrescreve o campo com o HTML atual do editor. Isso protege contra
+  // qualquer perda de sincronia do input escondido que possa ter acontecido
+  // antes (ex: reação tardia a input/blur), sem depender só desses eventos.
+  useEffect(() => {
+    const form = editorRef.current?.closest("form");
+    if (!form) return;
+    function handleFormData(e: FormDataEvent) {
+      if (editorRef.current) e.formData.set(name, editorRef.current.innerHTML);
+    }
+    form.addEventListener("formdata", handleFormData as EventListener);
+    return () => form.removeEventListener("formdata", handleFormData as EventListener);
+  }, [name]);
+
+  function exec(command: string, value?: string) {
+    editorRef.current?.focus();
+    document.execCommand(command, false, value);
+    syncHidden();
   }
 
-  const serialized = JSON.stringify({ text, highlights });
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const key = e.key.toLowerCase();
+    if (key === "b") {
+      e.preventDefault();
+      exec("bold");
+    } else if (key === "i") {
+      e.preventDefault();
+      exec("italic");
+    } else if (key === "u") {
+      e.preventDefault();
+      exec("underline");
+    }
+    // Ctrl+Z / Ctrl+Shift+Z (desfazer/refazer) já funcionam nativamente no
+    // contentEditable, sem precisar de handler.
+  }
 
   return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      <textarea
-        id={id}
-        rows={rows}
-        placeholder={placeholder}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        required={required}
-      />
+    <div className="field rte-field">
+      <label htmlFor={id}>
+        {label}
+        {required && <span aria-hidden="true"> *</span>}
+      </label>
 
-      <div className="highlight-composer">
-        <input
-          type="text"
-          value={draftPhrase}
-          onChange={(e) => setDraftPhrase(e.target.value)}
-          placeholder="Marcar um trecho (ex: insuficiência cardíaca)"
-        />
+      <div className="rte-toolbar" role="toolbar" aria-label={`Formatação de ${label}`}>
+        <button type="button" className="rte-btn" onClick={() => exec("bold")} aria-label="Negrito" title="Negrito (Ctrl+B)">
+          <b>B</b>
+        </button>
+        <button type="button" className="rte-btn" onClick={() => exec("italic")} aria-label="Itálico" title="Itálico (Ctrl+I)">
+          <i>I</i>
+        </button>
+        <button type="button" className="rte-btn" onClick={() => exec("underline")} aria-label="Sublinhado" title="Sublinhado (Ctrl+U)">
+          <u>S</u>
+        </button>
+        <button type="button" className="rte-btn" onClick={() => exec("strikeThrough")} aria-label="Tachado" title="Tachado">
+          <s>T</s>
+        </button>
+        <span className="rte-sep" />
+        <button type="button" className="rte-btn" onClick={() => exec("formatBlock", "h3")} aria-label="Título" title="Título">
+          H
+        </button>
+        <button type="button" className="rte-btn" onClick={() => exec("formatBlock", "p")} aria-label="Texto normal" title="Texto normal">
+          ¶
+        </button>
+        <span className="rte-sep" />
         <button
           type="button"
-          className={`format-toggle ${draftBold ? "active" : ""}`}
-          onClick={() => setDraftBold((b) => !b)}
-          aria-label="Negrito"
+          className="rte-btn"
+          onClick={() => exec("insertUnorderedList")}
+          aria-label="Lista com marcadores"
+          title="Lista com marcadores"
         >
-          B
+          •≡
         </button>
         <button
           type="button"
-          className={`format-toggle italic ${draftItalic ? "active" : ""}`}
-          onClick={() => setDraftItalic((it) => !it)}
-          aria-label="Itálico"
+          className="rte-btn"
+          onClick={() => exec("insertOrderedList")}
+          aria-label="Lista numerada"
+          title="Lista numerada"
         >
-          I
+          1≡
         </button>
-        <div className="color-swatches">
-          {COLOR_SWATCHES.map((c) => (
-            <button
-              key={c.value}
-              type="button"
-              className={`swatch-sm ${draftColor === c.value ? "selected" : ""}`}
-              style={{ background: c.value }}
-              aria-label={c.label}
-              onClick={() => setDraftColor((cur) => (cur === c.value ? null : c.value))}
-            />
-          ))}
+        <span className="rte-sep" />
+        <button type="button" className="rte-btn" onClick={() => exec("superscript")} aria-label="Sobrescrito" title="Sobrescrito">
+          x²
+        </button>
+        <button type="button" className="rte-btn" onClick={() => exec("subscript")} aria-label="Subscrito" title="Subscrito">
+          x₂
+        </button>
+        <span className="rte-sep" />
+
+        <div className="rte-color-wrap">
+          <button
+            type="button"
+            className="rte-btn"
+            onClick={() => {
+              setTextColorOpen((o) => !o);
+              setHighlightOpen(false);
+            }}
+            aria-label="Cor do texto"
+            title="Cor do texto"
+          >
+            <span style={{ color: "var(--wine)", fontWeight: 800 }}>A</span>
+          </button>
+          {textColorOpen && (
+            <div className="rte-color-panel">
+              {EDITOR_TEXT_COLORS.map((c) => (
+                <button
+                  key={c.hex}
+                  type="button"
+                  className="rte-swatch"
+                  style={{ background: c.hex }}
+                  aria-label={c.label}
+                  title={c.label}
+                  onClick={() => {
+                    exec("foreColor", c.hex);
+                    setTextColorOpen(false);
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={addHighlight}>
-          + destaque
+
+        <div className="rte-color-wrap">
+          <button
+            type="button"
+            className="rte-btn"
+            onClick={() => {
+              setHighlightOpen((o) => !o);
+              setTextColorOpen(false);
+            }}
+            aria-label="Marca-texto"
+            title="Marca-texto"
+          >
+            🖊
+          </button>
+          {highlightOpen && (
+            <div className="rte-color-panel">
+              {EDITOR_HIGHLIGHT_COLORS.map((c) => (
+                <button
+                  key={c.hex}
+                  type="button"
+                  className="rte-swatch"
+                  style={{ background: c.hex }}
+                  aria-label={c.label}
+                  title={c.label}
+                  onClick={() => {
+                    exec("hiliteColor", c.hex);
+                    setHighlightOpen(false);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <span className="rte-sep" />
+        <button type="button" className="rte-btn" onClick={() => exec("removeFormat")} aria-label="Limpar formatação" title="Limpar formatação">
+          ⌫
+        </button>
+        <button type="button" className="rte-btn" onClick={() => exec("undo")} aria-label="Desfazer" title="Desfazer (Ctrl+Z)">
+          ↺
+        </button>
+        <button type="button" className="rte-btn" onClick={() => exec("redo")} aria-label="Refazer" title="Refazer (Ctrl+Shift+Z)">
+          ↻
         </button>
       </div>
 
-      {highlights.length > 0 && (
-        <div className="highlight-chips">
-          {highlights.map((h, i) => (
-            <span
-              key={i}
-              className="highlight-chip"
-              style={{ fontWeight: h.bold ? 800 : undefined, fontStyle: h.italic ? "italic" : undefined, color: h.color || undefined }}
-            >
-              {h.phrase}
-              <button type="button" onClick={() => removeHighlight(i)} aria-label="Remover destaque">
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
+      <div
+        id={id}
+        ref={editorRef}
+        className="rte-editor"
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        aria-label={label}
+        data-placeholder={placeholder}
+        data-empty={isEmpty}
+        dangerouslySetInnerHTML={{ __html: sanitizeFlashcardHtml(defaultValue) }}
+        onInput={syncHidden}
+        onBlur={syncHidden}
+        onKeyDown={handleKeyDown}
+      />
 
-      {text && (
-        <div className="rich-preview">
-          <RichText raw={serialized} />
-        </div>
-      )}
-
-      <input type="hidden" name={name} value={serialized} readOnly />
+      <input ref={hiddenRef} type="hidden" name={name} defaultValue={sanitizeFlashcardHtml(defaultValue)} />
     </div>
   );
 }

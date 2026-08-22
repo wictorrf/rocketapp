@@ -1,29 +1,15 @@
-import { parseRichText, splitRichText } from "@/lib/utils/rich-text";
+import { sanitizeFlashcardHtml, htmlToPlainText } from "@/lib/utils/sanitize-html";
 
-export function RichText({ raw }: { raw: string }) {
-  const { text, highlights } = parseRichText(raw);
-  const segments = splitRichText(text, highlights);
-
+// Renderiza HTML de flashcard já formatado (negrito, listas, marca-texto,
+// etc). Sempre sanitiza de novo aqui, mesmo que o conteúdo já tenha sido
+// sanitizado ao salvar — defesa em camadas.
+export function RichText({ raw, className }: { raw: string; className?: string }) {
   return (
-    <>
-      {segments.map((seg, i) => (
-        <span
-          key={i}
-          style={{
-            fontWeight: seg.bold ? 800 : undefined,
-            fontStyle: seg.italic ? "italic" : undefined,
-            color: seg.color || undefined,
-          }}
-        >
-          {seg.text}
-        </span>
-      ))}
-    </>
+    <div
+      className={className ? `rich-text ${className}` : "rich-text"}
+      dangerouslySetInnerHTML={{ __html: sanitizeFlashcardHtml(raw) }}
+    />
   );
 }
 
-// Versão em texto puro (sem marcação), usada em contextos que não podem
-// renderizar JSX — ex: metadados, previews curtos.
-export function richTextToPlain(raw: string): string {
-  return parseRichText(raw).text;
-}
+export { htmlToPlainText };

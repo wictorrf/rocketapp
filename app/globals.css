@@ -2556,6 +2556,34 @@ h2.section-title {
   flex-direction: column;
   gap: 10px;
 }
+.collapsible-section {
+  margin-bottom: 20px;
+}
+.collapsible-section summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.collapsible-section summary::-webkit-details-marker {
+  display: none;
+}
+.collapsible-section summary h2 {
+  margin-bottom: 0;
+}
+.collapsible-section summary::before {
+  content: "▸";
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+.collapsible-section[open] summary::before {
+  transform: rotate(90deg);
+}
+.collapsible-body {
+  margin-top: 14px;
+}
 .fc-row {
   display: flex;
   align-items: center;
@@ -2567,6 +2595,17 @@ h2.section-title {
 }
 .fc-row.overdue {
   border: 1.5px solid var(--wine-bright);
+}
+.fc-row.suspended {
+  opacity: 0.6;
+}
+.fc-row-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
 }
 .fc-thumb {
   width: 46px;
@@ -2617,9 +2656,17 @@ h2.section-title {
   background: #fbf0dc;
   color: var(--amber);
 }
-.fc-stage.consolidado {
+.fc-stage.revisao {
   background: #e3f0ea;
   color: var(--green);
+}
+.fc-stage.reaprendizagem {
+  background: var(--lavender);
+  color: #6b5a9e;
+}
+.fc-stage.suspenso {
+  background: var(--ice-dim);
+  color: var(--text-muted);
 }
 
 /* ---------- questões e simulados ---------- */
@@ -2695,6 +2742,124 @@ h2.section-title {
   max-height: 160px;
   border-radius: 8px;
 }
+.fc-image-upload-hint {
+  display: block;
+  font-size: 12.5px;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+/* ---------- editor de texto rico ---------- */
+.rte-field {
+  margin-bottom: 18px;
+}
+.rte-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  background: var(--ice);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: 6px;
+}
+.rte-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rte-btn:hover {
+  background: var(--ice-dim);
+}
+.rte-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+.rte-color-wrap {
+  position: relative;
+}
+.rte-color-panel {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lift);
+  padding: 10px;
+}
+.rte-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  cursor: pointer;
+}
+.rte-editor {
+  border: 1px solid var(--line);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  padding: 12px 14px;
+  min-height: 90px;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+}
+.rte-editor:focus {
+  border-color: var(--wine);
+}
+.rte-editor[data-empty="true"]::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.rte-editor h3,
+.rich-text h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  margin: 4px 0;
+}
+.rte-editor h4,
+.rich-text h4 {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  margin: 4px 0;
+}
+.rte-editor ul,
+.rte-editor ol,
+.rich-text ul,
+.rich-text ol {
+  padding-left: 22px;
+  margin: 4px 0;
+}
+.rich-text {
+  font-size: inherit;
+  line-height: inherit;
+}
+.rich-text p {
+  margin: 0 0 8px;
+}
+.rich-text p:last-child {
+  margin-bottom: 0;
+}
 
 /* ---------- review session ---------- */
 .review-screen {
@@ -2748,6 +2913,12 @@ h2.section-title {
   font-family: var(--font-mono);
   font-size: 11.5px;
   color: rgba(255, 255, 255, 0.6);
+}
+.review-composition {
+  display: block;
+  margin-top: 3px;
+  font-size: 10.5px !important;
+  color: rgba(255, 255, 255, 0.4) !important;
 }
 .review-card-area {
   flex: 1;
@@ -2874,6 +3045,10 @@ h2.section-title {
 }
 .rg-hard {
   background: var(--amber);
+  color: #fff;
+}
+.rg-good {
+  background: var(--blue-academic);
   color: #fff;
 }
 .rg-easy {

@@ -14,15 +14,18 @@ export default async function MixedReviewPage({
   const sessionId = Array.isArray(session) ? session[0] : session;
   if (!sessionId) redirect("/flashcards");
 
-  const cards = await getAllDueFlashcardsForUser(profile.userId);
+  const { cards, composition } = await getAllDueFlashcardsForUser(profile.userId);
   if (cards.length === 0) redirect("/flashcards");
 
-  const imagePaths = cards.map((c) => c.imageUrl).filter((p): p is string => Boolean(p));
+  const imagePaths = cards.flatMap((c) => [c.imageUrl, c.backImageUrl]).filter((p): p is string => Boolean(p));
   const signedUrls = await getSignedUrls("flashcard-images", imagePaths);
   const cardsWithSignedUrls = cards.map((c) => ({
     ...c,
     imageUrl: c.imageUrl ? (signedUrls.get(c.imageUrl) ?? null) : null,
+    backImageUrl: c.backImageUrl ? (signedUrls.get(c.backImageUrl) ?? null) : null,
   }));
 
-  return <ReviewSession cards={cardsWithSignedUrls} sessionId={sessionId} backHref="/flashcards" />;
+  return (
+    <ReviewSession cards={cardsWithSignedUrls} sessionId={sessionId} backHref="/flashcards" composition={composition} />
+  );
 }

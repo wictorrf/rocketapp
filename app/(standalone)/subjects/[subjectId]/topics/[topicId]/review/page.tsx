@@ -20,14 +20,15 @@ export default async function ReviewPage({
   if (!topic) notFound();
   if (!sessionId) redirect(`/subjects/${subjectId}/topics/${topicId}`);
 
-  const cards = await getDueFlashcardsForReview(topicId);
+  const { cards, composition } = await getDueFlashcardsForReview(topicId);
   if (cards.length === 0) redirect(`/subjects/${subjectId}/topics/${topicId}`);
 
-  const imagePaths = cards.map((c) => c.imageUrl).filter((p): p is string => Boolean(p));
+  const imagePaths = cards.flatMap((c) => [c.imageUrl, c.backImageUrl]).filter((p): p is string => Boolean(p));
   const signedUrls = await getSignedUrls("flashcard-images", imagePaths);
   const cardsWithSignedUrls = cards.map((c) => ({
     ...c,
     imageUrl: c.imageUrl ? (signedUrls.get(c.imageUrl) ?? null) : null,
+    backImageUrl: c.backImageUrl ? (signedUrls.get(c.backImageUrl) ?? null) : null,
   }));
 
   return (
@@ -35,6 +36,7 @@ export default async function ReviewPage({
       cards={cardsWithSignedUrls}
       sessionId={sessionId}
       backHref={`/subjects/${subjectId}/topics/${topicId}`}
+      composition={composition}
     />
   );
 }

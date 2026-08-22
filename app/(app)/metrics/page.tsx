@@ -31,7 +31,11 @@ export default async function MetricsPage({ searchParams }: PageProps<"/metrics"
   const reviewsMax = Math.max(1, ...metrics.reviewsByDay.map((d) => d.value));
   const minutesMax = Math.max(1, ...metrics.studiedMinutesByDay.map((d) => d.value));
   const stageTotal =
-    metrics.stageDistribution.novo + metrics.stageDistribution.aprendendo + metrics.stageDistribution.consolidado;
+    metrics.stageDistribution.novo +
+    metrics.stageDistribution.aprendendo +
+    metrics.stageDistribution.revisao +
+    metrics.stageDistribution.reaprendizagem +
+    metrics.stageDistribution.suspenso;
 
   return (
     <div>
@@ -103,13 +107,23 @@ export default async function MetricsPage({ searchParams }: PageProps<"/metrics"
           </div>
           <div className="weak-point mid">
             <div className="wp-rank" style={{ color: "var(--amber)" }}>●</div>
-            <div className="wp-name">Aprendendo</div>
+            <div className="wp-name">Em aprendizagem</div>
             <div className="wp-pct" style={{ color: "var(--amber)" }}>{metrics.stageDistribution.aprendendo}</div>
           </div>
           <div className="weak-point high">
             <div className="wp-rank" style={{ color: "var(--green)" }}>●</div>
-            <div className="wp-name">Consolidados</div>
-            <div className="wp-pct" style={{ color: "var(--green)" }}>{metrics.stageDistribution.consolidado}</div>
+            <div className="wp-name">Em revisão</div>
+            <div className="wp-pct" style={{ color: "var(--green)" }}>{metrics.stageDistribution.revisao}</div>
+          </div>
+          <div className="weak-point mid">
+            <div className="wp-rank" style={{ color: "#6b5a9e" }}>●</div>
+            <div className="wp-name">Em reaprendizagem</div>
+            <div className="wp-pct" style={{ color: "#6b5a9e" }}>{metrics.stageDistribution.reaprendizagem}</div>
+          </div>
+          <div className="weak-point low">
+            <div className="wp-rank" style={{ color: "var(--text-muted)" }}>●</div>
+            <div className="wp-name">Suspensos</div>
+            <div className="wp-pct" style={{ color: "var(--text-muted)" }}>{metrics.stageDistribution.suspenso}</div>
           </div>
           {stageTotal === 0 && (
             <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 10 }}>

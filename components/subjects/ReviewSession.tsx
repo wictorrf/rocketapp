@@ -1,69 +1,91 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { RocketIcon } from "@/components/ui/RocketIcon";
-import { RichText, richTextToPlain } from "@/components/ui/RichText";
-import { STAGE_LABEL_PT } from "@/lib/srs/sm2";
+import { RichText } from "@/components/ui/RichText";
+import { htmlToPlainText } from "@/lib/utils/sanitize-html";
+import { Rating, type Grade } from "@/lib/srs/fsrs";
 import { gradeFlashcardAction, finishReviewSessionAction } from "@/lib/actions/review";
-import type { ReviewCard } from "@/lib/queries/review";
-
-type Grade = 0 | 1 | 2;
+import type { ReviewCard, QueueComposition } from "@/lib/queries/review";
 
 type ResultEntry = {
   card: ReviewCard;
-  grade: Grade;
-  intervalDays: number;
+  rating: Grade;
+  intervalLabel: string;
 };
+
+const GRADE_BUTTONS: { rating: Grade; label: string; className: string; key: string }[] = [
+  { rating: Rating.Again, label: "Esqueci", className: "rg-fail", key: "1" },
+  { rating: Rating.Hard, label: "Difícil", className: "rg-hard", key: "2" },
+  { rating: Rating.Good, label: "Bom", className: "rg-good", key: "3" },
+  { rating: Rating.Easy, label: "Fácil", className: "rg-easy", key: "4" },
+];
 
 export function ReviewSession({
   cards,
   sessionId,
   backHref,
+  composition,
 }: {
   cards: ReviewCard[];
   sessionId: string;
   backHref: string;
+  composition?: QueueComposition;
 }) {
   const [index, setIndex] = useState(0);
-  const [flipped, setFlipped] = useState(false);
+  const [revealed, setRevealed] = useState(false);
   const [grading, setGrading] = useState(false);
   const [results, setResults] = useState<ResultEntry[]>([]);
   const [phase, setPhase] = useState<"reviewing" | "summary">("reviewing");
 
   const card = cards[index];
 
-  async function handleGrade(grade: Grade) {
-    if (grading) return;
+  async function handleGrade(rating: Grade) {
+    if (grading || !revealed) return;
     setGrading(true);
-    const result = await gradeFlashcardAction(card.id, sessionId, grade);
-    const nextResults = [...results, { card, grade, intervalDays: result.intervalDays }];
+    const result = await gradeFlashcardAction(card.id, sessionId, rating);
+    const nextResults = [...results, { card, rating, intervalLabel: result.intervalLabel }];
     setResults(nextResults);
     setGrading(false);
 
     if (index + 1 < cards.length) {
       setIndex(index + 1);
-      setFlipped(false);
+      setRevealed(false);
     } else {
-      const remembered = nextResults.filter((r) => r.grade > 0).length;
+      const remembered = nextResults.filter((r) => r.rating > Rating.Again).length;
       await finishReviewSessionAction(sessionId, nextResults.length, remembered);
       setPhase("summary");
     }
   }
 
+  useEffect(() => {
+    if (phase !== "reviewing") return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.repeat) return;
+      if (!revealed) {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          setRevealed(true);
+        }
+        return;
+      }
+      const btn = GRADE_BUTTONS.find((b) => b.key === e.key);
+      if (btn) {
+        e.preventDefault();
+        handleGrade(btn.rating);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealed, phase, grading, index]);
+
   if (phase === "summary") {
     const total = results.length;
-    const remembered = results.filter((r) => r.grade > 0).length;
+    const remembered = results.filter((r) => r.rating > Rating.Again).length;
     const retention = total ? Math.round((remembered / total) * 100) : 0;
-    const toReview = results.filter((r) => r.grade < 2);
-    const soon = results.filter((r) => r.intervalDays <= 3).length;
-    const later = total - soon;
-
-    let nextInfo = "";
-    if (soon > 0) nextInfo += `${soon} ${soon > 1 ? "cartões" : "cartão"} em poucos dias`;
-    if (soon > 0 && later > 0) nextInfo += ", ";
-    if (later > 0) nextInfo += `${later} ${later > 1 ? "cartões" : "cartão"} mais adiante`;
-    if (!nextInfo) nextInfo = "tudo revisado por agora";
+    const toReview = results.filter((r) => r.rating <= Rating.Hard);
 
     return (
       <div className="summary-screen">
@@ -91,7 +113,7 @@ export function ReviewSession({
               <b>Pontos para revisar</b>
               <ul>
                 {toReview.map((r) => (
-                  <li key={r.card.id}>{richTextToPlain(r.card.front)}</li>
+                  <li key={r.card.id}>{htmlToPlainText(r.card.front)}</li>
                 ))}
               </ul>
             </div>
@@ -102,8 +124,8 @@ export function ReviewSession({
               <RocketIcon size={14} />
             </div>
             <div>
-              <b>Próxima revisão calculada automaticamente</b>
-              <span>{nextInfo}</span>
+              <b>Próxima revisão calculada automaticamente pelo FSRS</b>
+              <span>cada cartão recebeu sua própria data, conforme a resposta dada</span>
             </div>
           </div>
 
@@ -134,13 +156,22 @@ export function ReviewSession({
           <span>
             Cartão {index + 1} de {cards.length}
           </span>
+          {composition && (
+            <span className="review-composition">
+              {composition.overdue > 0 && `${composition.overdue} atrasados`}
+              {composition.overdue > 0 && (composition.dueToday > 0 || composition.newCards > 0) && ", "}
+              {composition.dueToday > 0 && `${composition.dueToday} previstos para hoje`}
+              {composition.dueToday > 0 && composition.newCards > 0 && ", "}
+              {composition.newCards > 0 && `${composition.newCards} novos`}
+            </span>
+          )}
         </div>
         <div style={{ width: 38 }} />
       </div>
 
       <div className="review-card-area">
-        <div className="flip-card" onClick={() => setFlipped((f) => !f)}>
-          <div className={`flip-inner ${flipped ? "flipped" : ""}`}>
+        <div className="flip-card" onClick={() => !revealed && setRevealed(true)}>
+          <div className={`flip-inner ${revealed ? "flipped" : ""}`}>
             <div className="flip-face flip-front">
               <div className="fc-eyebrow">Frente</div>
               {card.imageUrl && (
@@ -160,10 +191,17 @@ export function ReviewSession({
               <div className="fc-question">
                 <RichText raw={card.front} />
               </div>
-              <div className="fc-tap-hint">Toque para virar</div>
+              <div className="fc-tap-hint">Toque ou pressione Espaço para mostrar a resposta</div>
             </div>
             <div className="flip-face flip-back">
               <div className="fc-eyebrow">Verso</div>
+              {card.backImageUrl && (
+                <img
+                  src={card.backImageUrl}
+                  alt=""
+                  style={{ maxWidth: "100%", maxHeight: 100, borderRadius: 8, marginBottom: 12 }}
+                />
+              )}
               <div className="fc-answer">
                 <RichText raw={card.back} />
               </div>
@@ -172,21 +210,20 @@ export function ReviewSession({
         </div>
       </div>
 
-      <div className="review-grading" style={{ visibility: flipped ? "visible" : "hidden" }}>
+      <div className="review-grading" style={{ visibility: revealed ? "visible" : "hidden" }}>
         <div className="rg-label">Você lembrou desse cartão?</div>
         <div className="rg-buttons">
-          <button className="rg-btn rg-fail" disabled={grading} onClick={() => handleGrade(0)}>
-            Não lembrei
-            <span>revisa amanhã</span>
-          </button>
-          <button className="rg-btn rg-hard" disabled={grading} onClick={() => handleGrade(1)}>
-            Com esforço
-            <span>revisa em poucos dias</span>
-          </button>
-          <button className="rg-btn rg-easy" disabled={grading} onClick={() => handleGrade(2)}>
-            Lembrei fácil
-            <span>revisa em mais tempo · {STAGE_LABEL_PT.consolidado.toLowerCase()} em breve</span>
-          </button>
+          {GRADE_BUTTONS.map((b) => (
+            <button
+              key={b.rating}
+              className={`rg-btn ${b.className}`}
+              disabled={grading}
+              onClick={() => handleGrade(b.rating)}
+            >
+              {b.label}
+              <span>revisa em {card.previews.find((p) => p.rating === b.rating)?.intervalLabel ?? "…"}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

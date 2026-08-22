@@ -18,14 +18,6 @@ export function formatHours(minutes: number): string {
   return `${hours % 1 === 0 ? hours.toFixed(0) : hours.toFixed(1)}h`;
 }
 
-// Colunas `date` do Postgres vêm como "YYYY-MM-DD", sem horário/fuso. Usar
-// `new Date(str)` interpreta isso como meia-noite UTC, o que "volta" um dia
-// em fusos atrás de UTC (ex: Brasil) — por isso parseamos como data local.
-function parseLocalDateOnly(dateOnly: string): Date {
-  const [year, month, day] = dateOnly.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
 // Inverso: formata um Date como "YYYY-MM-DD" no fuso local (não em UTC como
 // `toISOString()` faz) — pra agrupar/comparar por "dia local do usuário".
 export function toLocalDateKey(date: Date): string {
@@ -35,21 +27,26 @@ export function toLocalDateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-// Formata "daqui a quanto tempo" pra datas futuras (ex: próxima revisão prevista).
-export function formatDueIn(dueAtDateOnly: string): string {
-  const due = parseLocalDateOnly(dueAtDateOnly);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((due.getTime() - today.getTime()) / 86_400_000);
+// Formata "daqui a quanto tempo" pra datas/horas futuras (ex: próxima
+// revisão de flashcard, com o FSRS podendo agendar em minutos/horas dentro
+// do mesmo dia, não só em dias inteiros).
+export function formatDueIn(dueAtIso: string): string {
+  const due = new Date(dueAtIso);
+  const now = new Date();
+  const diffMs = due.getTime() - now.getTime();
 
+  if (diffMs <= 0) return "hoje";
+  if (diffMs < 3_600_000) return `em ${Math.max(1, Math.round(diffMs / 60_000))} min`;
+  if (diffMs < 86_400_000 && due.getDate() === now.getDate()) return `em ${Math.round(diffMs / 3_600_000)} h`;
+
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((dueDay.getTime() - today.getTime()) / 86_400_000);
   if (diffDays <= 0) return "hoje";
   if (diffDays === 1) return "amanhã";
   return `em ${diffDays} dias`;
 }
 
-export function isOverdue(dueAtDateOnly: string): boolean {
-  const due = parseLocalDateOnly(dueAtDateOnly);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return due.getTime() < today.getTime();
+export function isOverdue(dueAtIso: string): boolean {
+  return new Date(dueAtIso).getTime() < Date.now();
 }

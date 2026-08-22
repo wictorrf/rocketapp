@@ -1,11 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
-import { deriveStageLabel } from "@/lib/srs/sm2";
+import { deriveStageLabel, Rating } from "@/lib/srs/fsrs";
 import { toLocalDateKey } from "@/lib/utils/format";
 
 export type MetricsPeriod = "week" | "month" | "all";
 
 export type DayBar = { label: string; value: number; date: string };
-export type StageDistribution = { novo: number; aprendendo: number; consolidado: number };
+export type StageDistribution = {
+  novo: number;
+  aprendendo: number;
+  revisao: number;
+  reaprendizagem: number;
+  suspenso: number;
+};
 export type SubjectRanking = { subjectId: string; subjectName: string; accuracyPct: number };
 export type PieSlice = { label: string; minutes: number; pct: number; color: string };
 
@@ -67,7 +73,7 @@ export async function getMetrics(userId: string, period: MetricsPeriod): Promise
   const supabase = await createClient();
   const start = periodStart(period);
   const startIso = start?.toISOString();
-  const todayKey = toLocalDateKey(new Date());
+  const nowIso = new Date().toISOString();
 
   const [
     { data: logs },
@@ -80,11 +86,11 @@ export async function getMetrics(userId: string, period: MetricsPeriod): Promise
     { data: topics },
   ] = await Promise.all([
     (() => {
-      let q = supabase.from("review_logs").select("flashcard_id, grade, reviewed_at").eq("user_id", userId);
+      let q = supabase.from("review_logs").select("flashcard_id, rating, reviewed_at").eq("user_id", userId);
       if (startIso) q = q.gte("reviewed_at", startIso);
       return q;
     })(),
-    supabase.from("flashcard_srs_state").select("repetitions, interval_days").eq("user_id", userId),
+    supabase.from("flashcard_srs_state").select("state, suspended_at").eq("user_id", userId),
     (() => {
       let q = supabase
         .from("focus_sessions")
@@ -111,20 +117,26 @@ export async function getMetrics(userId: string, period: MetricsPeriod): Promise
       if (startIso) q = q.gte("logged_at", startIso);
       return q;
     })(),
-    supabase.from("flashcard_srs_state").select("flashcard_id").eq("user_id", userId).lte("due_at", todayKey),
+    supabase
+      .from("flashcard_srs_state")
+      .select("flashcard_id")
+      .eq("user_id", userId)
+      .is("suspended_at", null)
+      .lte("due_at", nowIso),
     supabase.from("subjects").select("id, name").eq("user_id", userId),
     supabase.from("topics").select("id, subject_id").eq("user_id", userId),
   ]);
 
   // ---- flashcards revisados / retenção ----
+  // Esqueci (rating 1) é falha; Difícil/Bom/Fácil (2-4) contam como recordação.
   const flashcardsReviewed = logs?.length ?? 0;
-  const remembered = (logs ?? []).filter((l) => l.grade > 0).length;
+  const remembered = (logs ?? []).filter((l) => l.rating > Rating.Again).length;
   const retentionPct = flashcardsReviewed ? Math.round((remembered / flashcardsReviewed) * 100) : null;
 
   // ---- estágio dos cartões (snapshot atual, não filtrado por período) ----
-  const stageDistribution: StageDistribution = { novo: 0, aprendendo: 0, consolidado: 0 };
+  const stageDistribution: StageDistribution = { novo: 0, aprendendo: 0, revisao: 0, reaprendizagem: 0, suspenso: 0 };
   for (const s of srsStates ?? []) {
-    stageDistribution[deriveStageLabel({ repetitions: s.repetitions, intervalDays: s.interval_days })] += 1;
+    stageDistribution[deriveStageLabel(s.state, Boolean(s.suspended_at))] += 1;
   }
 
   // ---- flashcards revisados por dia (últimos 7 dias, sempre) ----
@@ -169,7 +181,7 @@ export async function getMetrics(userId: string, period: MetricsPeriod): Promise
     if (!subjectId) continue;
     const stat = subjectStats.get(subjectId) ?? { remembered: 0, total: 0 };
     stat.total += 1;
-    if (l.grade > 0) stat.remembered += 1;
+    if (l.rating > Rating.Again) stat.remembered += 1;
     subjectStats.set(subjectId, stat);
   }
   const weakestSubjects: SubjectRanking[] = [...subjectStats.entries()]
