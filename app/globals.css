@@ -1908,15 +1908,34 @@ h2.section-title {
   color: var(--pink);
 }
 
-/* ---------- busca de disciplinas ---------- */
+/* ---------- busca e filtros de disciplinas/assuntos ---------- */
+.subject-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.subject-filters select {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  background: var(--white);
+  color: var(--text);
+  cursor: pointer;
+}
 .subject-search {
   position: relative;
-  margin-bottom: 18px;
   max-width: 320px;
+  flex: 1;
+  min-width: 200px;
 }
 .subject-search input {
   width: 100%;
-  padding: 11px 15px 11px 40px;
+  padding: 11px 38px 11px 40px;
   border-radius: 999px;
   border: 1.5px solid var(--line);
   font-family: var(--font-body);
@@ -1938,6 +1957,33 @@ h2.section-title {
   color: var(--text-muted);
   pointer-events: none;
 }
+.subject-search-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: var(--ice);
+  color: var(--text-muted);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 10px;
+}
+.duplicate-warning {
+  background: var(--pink-soft);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--wine-deep);
+}
+.duplicate-warning-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
 .cal-cell.ritual-day {
   background: var(--pink-soft);
 }
@@ -1954,13 +2000,23 @@ h2.section-title {
 .subject-row {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 10px;
   padding: 18px;
   background: var(--white);
   border-radius: var(--radius-md);
   margin-bottom: 12px;
   box-shadow: var(--shadow);
+}
+.subject-row-link {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
   flex-wrap: wrap;
+  cursor: pointer;
 }
 .subject-icon {
   width: 44px;
@@ -3164,6 +3220,201 @@ h2.section-title {
   height: 18px;
   accent-color: var(--wine);
   cursor: pointer;
+}
+
+/* ---------- painel lateral (desktop) / tela cheia (mobile) ---------- */
+.side-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 24, 26, 0.5);
+  z-index: 300;
+  display: flex;
+  justify-content: flex-end;
+}
+.side-panel-box {
+  background: var(--white);
+  width: 100%;
+  max-width: 460px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 28px 30px 40px;
+  box-shadow: var(--shadow-lift);
+  animation: side-panel-in 0.22s ease;
+}
+@keyframes side-panel-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@media (max-width: 640px) {
+  .side-panel-box {
+    max-width: 100%;
+  }
+}
+
+/* ---------- seletor de cor (grade de 14) ---------- */
+.color-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  max-width: 280px;
+}
+.color-swatch-grid .swatch {
+  width: 28px;
+  height: 28px;
+}
+
+/* ---------- seletor de emoji completo (emoji-picker-react) ---------- */
+.emoji-picker-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.emoji-picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+}
+.emoji-picker-current {
+  font-size: 19px;
+  line-height: 1;
+}
+.emoji-picker-placeholder {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.emoji-picker-clear {
+  border: none;
+  background: var(--ice);
+  color: var(--text-muted);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.emoji-picker-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  box-shadow: var(--shadow-lift);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* ---------- menu de três pontos ---------- */
+.kebab-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+.kebab-trigger {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kebab-trigger:hover {
+  background: var(--ice);
+  color: var(--text);
+}
+.kebab-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lift);
+  padding: 6px;
+  min-width: 190px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kebab-item {
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+.kebab-item:hover {
+  background: var(--ice);
+}
+.kebab-item.danger {
+  color: var(--red-soft);
+}
+.kebab-item.danger:hover {
+  background: var(--pink-soft);
+}
+
+/* ---------- diálogo de confirmação ---------- */
+.confirm-dialog {
+  max-width: 440px;
+}
+.confirm-dialog h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.confirm-dialog-body {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 22px;
+}
+.confirm-dialog-body b {
+  color: var(--text);
+}
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ---------- badge de arquivado / estado ---------- */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--ice);
+  color: var(--text-muted);
+}
+.status-badge.pending {
+  background: rgba(216, 149, 44, 0.14);
+  color: var(--amber);
 }
 
 /* ---------- editor de texto simples (flashcards) ---------- */

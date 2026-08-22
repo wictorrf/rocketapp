@@ -1,76 +1,62 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/queries/profile";
-import { listSubjectsWithSummary } from "@/lib/queries/subjects";
-import { formatRelativeDays, formatHours } from "@/lib/utils/format";
-import { NewSubjectForm } from "@/components/subjects/NewSubjectForm";
-import { SubjectSearchBar } from "@/components/subjects/SubjectSearchBar";
+import { listSubjectsWithSummary, type SubjectStatusFilter, type SubjectSortKey } from "@/lib/queries/subjects";
+import { NewSubjectButton } from "@/components/subjects/NewSubjectButton";
+import { SubjectFilters } from "@/components/subjects/SubjectFilters";
+import { SubjectCard } from "@/components/subjects/SubjectCard";
+
+const VALID_STATUS: SubjectStatusFilter[] = ["all", "active", "archived", "pending"];
+const VALID_SORT: SubjectSortKey[] = [
+  "name",
+  "created_desc",
+  "last_activity",
+  "studied_minutes",
+  "topic_count",
+  "flashcard_count",
+  "pending_reviews",
+];
 
 export default async function SubjectsPage({ searchParams }: PageProps<"/subjects">) {
   const profile = await getCurrentUserProfile();
   if (!profile) redirect("/login");
 
-  const { q } = await searchParams;
-  const query = Array.isArray(q) ? q[0] : (q ?? "");
+  const { q, status: statusParam, sort: sortParam } = await searchParams;
+  const query = Array.isArray(q) ? (q[0] ?? "") : (q ?? "");
+  const statusRaw = Array.isArray(statusParam) ? statusParam[0] : statusParam;
+  const sortRaw = Array.isArray(sortParam) ? sortParam[0] : sortParam;
+  const status: SubjectStatusFilter = VALID_STATUS.includes(statusRaw as SubjectStatusFilter)
+    ? (statusRaw as SubjectStatusFilter)
+    : "active";
+  const sort: SubjectSortKey = VALID_SORT.includes(sortRaw as SubjectSortKey)
+    ? (sortRaw as SubjectSortKey)
+    : "name";
 
-  const allSubjects = await listSubjectsWithSummary(profile.userId);
-  const subjects = query.trim()
-    ? allSubjects.filter((s) => s.name.toLowerCase().includes(query.trim().toLowerCase()))
-    : allSubjects;
+  const subjects = await listSubjectsWithSummary(profile.userId, { search: query, status, sort });
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
         <h2 className="section-title" style={{ margin: 0 }}>
-          Suas disciplinas
+          Disciplinas
         </h2>
+        <NewSubjectButton />
       </div>
 
-      <NewSubjectForm />
-      <SubjectSearchBar initialQuery={query} />
+      <SubjectFilters initialQuery={query} initialStatus={status} initialSort={sort} />
 
       {subjects.length === 0 && (
-        <div className="card" style={{ textAlign: "center", color: "var(--text-muted)" }}>
-          {query.trim()
-            ? `Nenhuma disciplina encontrada pra "${query}".`
-            : "Nenhuma disciplina cadastrada ainda. Crie a primeira acima."}
+        <div className="card" style={{ textAlign: "center", color: "var(--text-muted)", marginTop: 16 }}>
+          {query.trim() && `Nenhuma disciplina encontrada para "${query}".`}
+          {!query.trim() && status === "archived" && "Nenhuma disciplina arquivada."}
+          {!query.trim() && status === "pending" && "Nenhuma disciplina com revisões pendentes."}
+          {!query.trim() && (status === "active" || status === "all") && (
+            <>Você ainda não criou nenhuma disciplina. Crie a primeira acima.</>
+          )}
         </div>
       )}
 
       {subjects.map((subject) => (
-        <Link
-          key={subject.id}
-          href={`/subjects/${subject.id}/topics`}
-          className="subject-row"
-          style={{ cursor: "pointer" }}
-        >
-          <div className="subject-icon">{subject.icon ?? "📚"}</div>
-          <div className="subject-info">
-            <b>{subject.name}</b>
-            <span>
-              {subject.topicCount} {subject.topicCount === 1 ? "assunto" : "assuntos"}, última revisão{" "}
-              {formatRelativeDays(subject.lastReviewedAt)}
-            </span>
-          </div>
-          <div className="subject-bar">
-            <div className="bar-track">
-              <div className="bar-fill" style={{ width: `${subject.coveragePct}%` }} />
-            </div>
-            <span>{subject.coveragePct}% de cobertura</span>
-          </div>
-          <div className="subject-stats">
-            <div>
-              <b style={subject.accuracyPct !== null && subject.accuracyPct < 65 ? { color: "var(--wine)" } : undefined}>
-                {subject.accuracyPct !== null ? `${subject.accuracyPct}%` : "—"}
-              </b>
-              <span>RETENÇÃO</span>
-            </div>
-            <div>
-              <b>{formatHours(subject.studiedMinutes)}</b>
-              <span>ESTUDADAS</span>
-            </div>
-          </div>
-        </Link>
+        <SubjectCard key={subject.id} subject={subject} />
       ))}
     </div>
   );

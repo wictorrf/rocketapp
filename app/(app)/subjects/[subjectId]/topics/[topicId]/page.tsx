@@ -6,7 +6,8 @@ import { getQuestionLogSummary } from "@/lib/queries/questions";
 import { getSignedUrls } from "@/lib/queries/storage";
 import { formatHours } from "@/lib/utils/format";
 import { FlashcardRow } from "@/components/subjects/FlashcardRow";
-import { QuestionLogForm } from "@/components/subjects/QuestionLogForm";
+import { NewQuestionLogButton } from "@/components/subjects/NewQuestionLogButton";
+import { QuestionLogList } from "@/components/subjects/QuestionLogList";
 import { EbbinghausCurve } from "@/components/subjects/EbbinghausCurve";
 import { startReviewSessionAction } from "@/lib/actions/review";
 
@@ -54,7 +55,7 @@ export default async function TopicDetailPage({
           href={`/subjects/${subjectId}/topics/${topicId}?tab=questoes`}
           className={activeTab === "questoes" ? "active" : ""}
         >
-          Questões e simulados
+          Questões registradas
         </Link>
       </div>
 
@@ -173,27 +174,11 @@ export default async function TopicDetailPage({
             </div>
           </div>
 
-          <QuestionLogForm subjectId={subjectId} topicId={topicId} />
+          <div style={{ marginBottom: 20 }}>
+            <NewQuestionLogButton subjectId={subjectId} topicId={topicId} />
+          </div>
 
-          {questionSummary?.logs.length === 0 && (
-            <div className="card" style={{ textAlign: "center", color: "var(--text-muted)" }}>
-              Nenhum registro ainda. Depois de fazer questões fora do app, registre aqui.
-            </div>
-          )}
-          {questionSummary?.logs.map((log) => (
-            <div key={log.id} className="qz-log-row">
-              <div className="qz-date">
-                {new Date(log.logged_at).toLocaleDateString("pt-BR")}
-              </div>
-              <div>
-                {log.questions_done} questões{log.note ? ` · ${log.note}` : ""}
-              </div>
-              <div className="qz-result">
-                {log.questions_correct}/{log.questions_done} (
-                {Math.round((log.questions_correct / log.questions_done) * 100)}%)
-              </div>
-            </div>
-          ))}
+          <QuestionLogList subjectId={subjectId} topicId={topicId} logs={questionSummary?.logs ?? []} />
         </>
       )}
     </div>

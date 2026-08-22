@@ -1,34 +1,65 @@
 import { createClient } from "@/lib/supabase/server";
-import { deriveStageLabel } from "@/lib/srs/sm2";
 
-export type SubjectSummary = {
+export type SubjectStatusFilter = "all" | "active" | "archived" | "pending";
+export type SubjectSortKey =
+  | "name"
+  | "created_desc"
+  | "last_activity"
+  | "studied_minutes"
+  | "topic_count"
+  | "flashcard_count"
+  | "pending_reviews";
+
+export type SubjectRecord = {
   id: string;
   name: string;
   icon: string | null;
-  topicCount: number;
-  totalFlashcards: number;
-  consolidatedFlashcards: number;
-  coveragePct: number;
-  accuracyPct: number | null;
-  studiedMinutes: number;
-  lastReviewedAt: string | null;
+  color: string | null;
+  period: string | null;
+  note: string | null;
+  archivedAt: string | null;
 };
 
-export async function listSubjectsWithSummary(userId: string): Promise<SubjectSummary[]> {
-  const supabase = await createClient();
+export type SubjectSummary = SubjectRecord & {
+  createdAt: string;
+  topicCount: number;
+  totalFlashcards: number;
+  pendingReviewsCount: number;
+  questionsAccuracyPct: number | null;
+  studiedMinutes: number;
+  lastActivityAt: string | null;
+};
 
-  const { data: subjects } = await supabase
+function normalize(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
+export async function listSubjectsWithSummary(
+  userId: string,
+  opts: { search?: string; status?: SubjectStatusFilter; sort?: SubjectSortKey } = {},
+): Promise<SubjectSummary[]> {
+  const supabase = await createClient();
+  const { search = "", status = "active", sort = "name" } = opts;
+
+  let subjectsQuery = supabase
     .from("subjects")
-    .select("id, name, icon")
-    .eq("user_id", userId)
-    .order("created_at");
+    .select("id, name, icon, color, period, note, archived_at, created_at")
+    .eq("user_id", userId);
+  if (status === "active" || status === "pending") subjectsQuery = subjectsQuery.is("archived_at", null);
+  if (status === "archived") subjectsQuery = subjectsQuery.not("archived_at", "is", null);
+
+  const { data: subjects } = await subjectsQuery.order("created_at");
   if (!subjects?.length) return [];
   const subjectIds = subjects.map((s) => s.id);
 
   const { data: topics } = await supabase
     .from("topics")
     .select("id, subject_id")
-    .in("subject_id", subjectIds);
+    .in("subject_id", subjectIds)
+    .is("archived_at", null);
   const topicToSubject = new Map((topics ?? []).map((t) => [t.id, t.subject_id as string]));
   const topicIds = (topics ?? []).map((t) => t.id);
 
@@ -40,72 +71,169 @@ export async function listSubjectsWithSummary(userId: string): Promise<SubjectSu
   );
   const flashcardIds = (flashcards ?? []).map((f) => f.id);
 
+  const todayKey = new Date().toISOString().slice(0, 10);
   const { data: srsStates } = flashcardIds.length
     ? await supabase
         .from("flashcard_srs_state")
-        .select("flashcard_id, repetitions, interval_days, last_reviewed_at")
+        .select("flashcard_id, due_at, last_reviewed_at")
         .in("flashcard_id", flashcardIds)
-    : { data: [] as { flashcard_id: string; repetitions: number; interval_days: number; last_reviewed_at: string | null }[] };
+    : { data: [] as { flashcard_id: string; due_at: string; last_reviewed_at: string | null }[] };
 
-  const { data: reviewLogs } = flashcardIds.length
-    ? await supabase.from("review_logs").select("flashcard_id, grade").in("flashcard_id", flashcardIds)
-    : { data: [] as { flashcard_id: string; grade: number }[] };
+  const { data: questionLogs } = await supabase
+    .from("question_logs")
+    .select("topic_id, questions_done, questions_correct, logged_at")
+    .in("topic_id", topicIds.length ? topicIds : ["00000000-0000-0000-0000-000000000000"]);
 
   const { data: focusSessions } = await supabase
     .from("focus_sessions")
-    .select("subject_id, actual_minutes")
+    .select("subject_id, actual_minutes, started_at")
     .in("subject_id", subjectIds);
 
-  return subjects.map((subject) => {
+  const rows = subjects.map((subject) => {
     const subjectFlashcardIds = new Set(
       [...flashcardToSubject.entries()]
-        .filter(([, subjectId]) => subjectId === subject.id)
+        .filter(([, sId]) => sId === subject.id)
         .map(([flashcardId]) => flashcardId),
+    );
+    const subjectTopicIds = new Set(
+      [...topicToSubject.entries()].filter(([, sId]) => sId === subject.id).map(([tId]) => tId),
     );
 
     const subjectSrsStates = (srsStates ?? []).filter((s) => subjectFlashcardIds.has(s.flashcard_id));
-    const consolidatedFlashcards = subjectSrsStates.filter(
-      (s) => deriveStageLabel({ repetitions: s.repetitions, intervalDays: s.interval_days }) === "consolidado",
-    ).length;
-
+    const pendingReviewsCount = subjectSrsStates.filter((s) => s.due_at <= todayKey).length;
     const lastReviewedAt = subjectSrsStates
       .map((s) => s.last_reviewed_at)
       .filter((d): d is string => Boolean(d))
       .sort()
       .at(-1) ?? null;
 
-    const subjectLogs = (reviewLogs ?? []).filter((l) => subjectFlashcardIds.has(l.flashcard_id));
-    const accuracyPct = subjectLogs.length
-      ? Math.round((subjectLogs.filter((l) => l.grade > 0).length / subjectLogs.length) * 100)
-      : null;
+    const subjectQuestionLogs = (questionLogs ?? []).filter((q) => subjectTopicIds.has(q.topic_id));
+    const totalDone = subjectQuestionLogs.reduce((sum, q) => sum + q.questions_done, 0);
+    const totalCorrect = subjectQuestionLogs.reduce((sum, q) => sum + q.questions_correct, 0);
+    const questionsAccuracyPct = totalDone ? Math.round((totalCorrect / totalDone) * 100) : null;
+    const lastQuestionLogAt = subjectQuestionLogs.map((q) => q.logged_at).sort().at(-1) ?? null;
 
-    const studiedMinutes = (focusSessions ?? [])
-      .filter((f) => f.subject_id === subject.id)
-      .reduce((sum, f) => sum + (f.actual_minutes ?? 0), 0);
+    const subjectFocusSessions = (focusSessions ?? []).filter((f) => f.subject_id === subject.id);
+    const studiedMinutes = subjectFocusSessions.reduce((sum, f) => sum + (f.actual_minutes ?? 0), 0);
+    const lastFocusAt = subjectFocusSessions.map((f) => f.started_at).sort().at(-1) ?? null;
+
+    const lastActivityAt = [lastReviewedAt, lastQuestionLogAt, lastFocusAt]
+      .filter((d): d is string => Boolean(d))
+      .sort()
+      .at(-1) ?? null;
 
     return {
       id: subject.id,
       name: subject.name,
       icon: subject.icon,
-      topicCount: [...topicToSubject.values()].filter((s) => s === subject.id).length,
+      color: subject.color,
+      period: subject.period,
+      note: subject.note,
+      archivedAt: subject.archived_at,
+      createdAt: subject.created_at,
+      topicCount: subjectTopicIds.size,
       totalFlashcards: subjectFlashcardIds.size,
-      consolidatedFlashcards,
-      coveragePct: subjectFlashcardIds.size
-        ? Math.round((consolidatedFlashcards / subjectFlashcardIds.size) * 100)
-        : 0,
-      accuracyPct,
+      pendingReviewsCount,
+      questionsAccuracyPct,
       studiedMinutes,
-      lastReviewedAt,
+      lastActivityAt,
     };
+  });
+
+  const filtered = search.trim()
+    ? rows.filter((r) => normalize(r.name).includes(normalize(search.trim())))
+    : rows;
+  const statusFiltered = status === "pending" ? filtered.filter((r) => r.pendingReviewsCount > 0) : filtered;
+
+  return statusFiltered.sort((a, b) => {
+    switch (sort) {
+      case "created_desc":
+        return b.createdAt.localeCompare(a.createdAt);
+      case "last_activity":
+        return (b.lastActivityAt ?? "").localeCompare(a.lastActivityAt ?? "");
+      case "studied_minutes":
+        return b.studiedMinutes - a.studiedMinutes;
+      case "topic_count":
+        return b.topicCount - a.topicCount;
+      case "flashcard_count":
+        return b.totalFlashcards - a.totalFlashcards;
+      case "pending_reviews":
+        return b.pendingReviewsCount - a.pendingReviewsCount;
+      default:
+        return a.name.localeCompare(b.name, "pt-BR");
+    }
   });
 }
 
-export async function getSubject(subjectId: string) {
+export async function getSubject(subjectId: string): Promise<SubjectRecord | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("subjects")
+    .select("id, name, icon, color, period, note, archived_at")
+    .eq("id", subjectId)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    id: data.id,
+    name: data.name,
+    icon: data.icon,
+    color: data.color,
+    period: data.period,
+    note: data.note,
+    archivedAt: data.archived_at,
+  };
+}
+
+export async function checkSubjectNameExists(
+  userId: string,
+  name: string,
+  excludeId?: string,
+): Promise<{ id: string; name: string } | null> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("subjects")
+    .select("id, name")
+    .eq("user_id", userId)
+    .ilike("name", name.trim());
+  if (excludeId) query = query.neq("id", excludeId);
+  const { data } = await query.maybeSingle();
+  return data;
+}
+
+export async function getSubjectDeletionImpact(subjectId: string) {
+  const supabase = await createClient();
+  const { data: topics } = await supabase.from("topics").select("id").eq("subject_id", subjectId);
+  const topicIds = (topics ?? []).map((t) => t.id);
+
+  const [{ count: flashcardCount }, { count: questionLogCount }, { count: calendarEventCount }, { count: focusSessionCount }] =
+    await Promise.all([
+      topicIds.length
+        ? supabase.from("flashcards").select("id", { count: "exact", head: true }).in("topic_id", topicIds)
+        : Promise.resolve({ count: 0 }),
+      topicIds.length
+        ? supabase.from("question_logs").select("id", { count: "exact", head: true }).in("topic_id", topicIds)
+        : Promise.resolve({ count: 0 }),
+      supabase.from("calendar_tasks").select("id", { count: "exact", head: true }).eq("subject_id", subjectId),
+      supabase.from("focus_sessions").select("id", { count: "exact", head: true }).eq("subject_id", subjectId),
+    ]);
+
+  return {
+    topicCount: topicIds.length,
+    flashcardCount: flashcardCount ?? 0,
+    questionLogCount: questionLogCount ?? 0,
+    calendarEventCount: calendarEventCount ?? 0,
+    focusSessionCount: focusSessionCount ?? 0,
+  };
+}
+
+export async function listActiveSubjectsForMove(userId: string, excludeId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("subjects")
     .select("id, name, icon")
-    .eq("id", subjectId)
-    .maybeSingle();
-  return data;
+    .eq("user_id", userId)
+    .is("archived_at", null)
+    .neq("id", excludeId)
+    .order("name");
+  return data ?? [];
 }
