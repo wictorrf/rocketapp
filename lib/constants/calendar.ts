@@ -1,46 +1,71 @@
-export type CalendarTaskType = "prova" | "questoes" | "contato" | "aula";
+import { ENTITY_COLORS } from "@/lib/constants/entity-colors";
 
-export const TASK_TYPE_OPTIONS: { value: CalendarTaskType; label: string; defaultColor: string }[] = [
-  { value: "prova", label: "Prova/Simulado", defaultColor: "#6E1E33" },
-  { value: "questoes", label: "Questões", defaultColor: "#17181A" },
-  { value: "contato", label: "Primeiro contato", defaultColor: "#F2A6C1" },
-  { value: "aula", label: "Aula", defaultColor: "#C98A2C" },
+export type CalendarTaskType =
+  | "aula"
+  | "estudo"
+  | "revisao"
+  | "questoes"
+  | "prova"
+  | "trabalho"
+  | "compromisso"
+  | "pessoal"
+  | "outro";
+
+export const TASK_TYPE_OPTIONS: { value: CalendarTaskType; label: string }[] = [
+  { value: "aula", label: "Aula" },
+  { value: "estudo", label: "Estudo" },
+  { value: "revisao", label: "Revisão" },
+  { value: "questoes", label: "Questões" },
+  { value: "prova", label: "Prova ou simulado" },
+  { value: "trabalho", label: "Trabalho ou entrega" },
+  { value: "compromisso", label: "Compromisso acadêmico" },
+  { value: "pessoal", label: "Pessoal" },
+  { value: "outro", label: "Outro" },
 ];
 
 export const TASK_TYPE_LABEL: Record<string, string> = Object.fromEntries(
   TASK_TYPE_OPTIONS.map((o) => [o.value, o.label]),
 );
 
-export const DEFAULT_COLOR_BY_TYPE: Record<string, string> = Object.fromEntries(
-  TASK_TYPE_OPTIONS.map((o) => [o.value, o.defaultColor]),
-);
+const hex = (id: (typeof ENTITY_COLORS)[number]["id"]) => ENTITY_COLORS.find((c) => c.id === id)!.hex;
 
-// Cobre também os tipos "sistêmicos" (revisão/ritual), que não aparecem no
-// seletor de tipo do modal de novo evento mas precisam de cor pro painel de
-// detalhes do dia.
-export const FULL_DEFAULT_COLOR_BY_TYPE: Record<string, string> = {
-  ...DEFAULT_COLOR_BY_TYPE,
-  revisao: "#4C8B6E",
-  ritual: "#4E1524",
+export const DEFAULT_COLOR_BY_TYPE: Record<CalendarTaskType, string> = {
+  aula: hex("orange"),
+  estudo: hex("blue"),
+  revisao: hex("green"),
+  questoes: hex("gray"),
+  prova: hex("wine"),
+  trabalho: hex("purple"),
+  compromisso: hex("blue-light"),
+  pessoal: hex("lavender"),
+  outro: hex("brown"),
 };
 
+// Revisões automáticas do FSRS (origin "fsrs") sempre chegam com
+// type: "revisao" e color: null — caem no default de "revisao" (verde) aqui.
 export function resolveTaskColor(task: { type: string; color: string | null }): string {
-  return task.color ?? FULL_DEFAULT_COLOR_BY_TYPE[task.type] ?? "#6B6F76";
+  return task.color ?? DEFAULT_COLOR_BY_TYPE[task.type as CalendarTaskType] ?? "#6B6F76";
 }
-
-export const COLOR_SWATCHES = [
-  { value: "#6E1E33", label: "Vinho" },
-  { value: "#F2A6C1", label: "Rosa" },
-  { value: "#C98A2C", label: "Âmbar" },
-  { value: "#4C8B6E", label: "Verde" },
-  { value: "#17181A", label: "Carvão" },
-  { value: "#4E1524", label: "Vinho escuro" },
-];
-
-export const EMOJI_QUICK_PICKS = [
-  "📚", "🩺", "🧠", "❤️", "🫁", "💉", "📝", "🔬", "⏰", "🎯", "✅", "📅", "🧪", "🏥", "💊",
-];
 
 export const WEEKDAY_LABEL_LONG_PT = [
   "domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado",
 ];
+
+export const WEEKDAY_LABEL_SHORT_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+// Segunda a domingo, na ordem que o Calendário usa (diferente do array acima,
+// que começa no domingo por conveniência de indexação com Date.getDay()).
+export const WEEKDAY_LABEL_MON_FIRST_PT = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+
+export type RepeatFrequency = "none" | "daily" | "weekly" | "monthly" | "custom";
+
+export const REPEAT_OPTIONS: { value: RepeatFrequency; label: string }[] = [
+  { value: "none", label: "Não repetir" },
+  { value: "daily", label: "Diariamente" },
+  { value: "weekly", label: "Semanalmente" },
+  { value: "monthly", label: "Mensalmente" },
+  { value: "custom", label: "Personalizada" },
+];
+
+export type EditScope = "this" | "future" | "all";
+export type DeleteScope = "this" | "future" | "all";

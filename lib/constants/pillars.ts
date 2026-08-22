@@ -11,6 +11,7 @@ export const PILLAR_OPTIONS: { key: string; label: string; emoji: string }[] = [
   { key: "familia", label: "Família", emoji: "👨‍👩‍👧" },
   { key: "social", label: "Social / Amizades", emoji: "🤝" },
   { key: "lazer", label: "Lazer", emoji: "🎨" },
+  { key: "outro", label: "Outro", emoji: "✨" },
 ];
 
 export const PILLAR_LABEL: Record<string, string> = Object.fromEntries(

@@ -265,7 +265,7 @@ export async function getWeekActivityDots(userId: string): Promise<WeekDot[]> {
 
 export type TodayTask = {
   id: string;
-  type: "revisao" | "prova" | "contato" | "ritual" | "aula" | "questoes";
+  type: "revisao" | "aula" | "estudo" | "questoes" | "prova" | "trabalho" | "compromisso" | "pessoal" | "outro";
   title: string;
   subtitle: string;
   time: string | null;
@@ -282,17 +282,19 @@ export async function getTodayTasks(userId: string): Promise<TodayTask[]> {
 
   const { data: manualTasks } = await supabase
     .from("calendar_tasks")
-    .select("id, type, title, scheduled_time, subject_id, topic_id, status, color, emoji")
+    .select("id, type, title, start_time, subject_id, topic_id, status, color, emoji")
     .eq("user_id", userId)
     .eq("scheduled_date", todayKey)
-    .order("scheduled_time", { ascending: true, nullsFirst: false });
+    .eq("show_in_checklist", true)
+    .neq("status", "cancelled")
+    .order("start_time", { ascending: true, nullsFirst: false });
 
   const tasks: TodayTask[] = (manualTasks ?? []).map((t) => ({
     id: t.id,
     type: t.type as TodayTask["type"],
     title: t.title,
     subtitle: "",
-    time: t.scheduled_time,
+    time: t.start_time,
     href: t.subject_id && t.topic_id ? `/subjects/${t.subject_id}/topics/${t.topic_id}` : "/calendar",
     checkable: true,
     done: t.status === "done",

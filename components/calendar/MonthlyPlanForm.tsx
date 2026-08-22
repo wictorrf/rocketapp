@@ -4,12 +4,27 @@ import { useActionState, useState } from "react";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { saveMonthlyPlanAction, type ActionState } from "@/lib/actions/calendar";
 import { PILLAR_OPTIONS, MAX_PILLARS } from "@/lib/constants/pillars";
+import type { MonthlyPlanGoals } from "@/lib/queries/calendar";
 
 const initialState: ActionState = { error: null };
 
-export function MonthlyPlanForm({ month, monthLabel }: { month: string; monthLabel: string }) {
+export function MonthlyPlanForm({
+  month,
+  monthLabel,
+  existingGoals,
+  onSaved,
+}: {
+  month: string;
+  monthLabel: string;
+  existingGoals?: MonthlyPlanGoals;
+  onSaved?: () => void;
+}) {
   const [state, formAction] = useActionState(saveMonthlyPlanAction, initialState);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(existingGoals?.pillars.map((p) => p.key) ?? []);
+  const [mission, setMission] = useState(existingGoals?.mission ?? "");
+  const [customPillarLabel, setCustomPillarLabel] = useState(
+    existingGoals?.pillars.find((p) => p.key === "outro")?.customLabel ?? "",
+  );
 
   function togglePillar(key: string) {
     setSelected((prev) => {
@@ -19,8 +34,19 @@ export function MonthlyPlanForm({ month, monthLabel }: { month: string; monthLab
     });
   }
 
+  function pillarDefault(key: string) {
+    return existingGoals?.pillars.find((p) => p.key === key);
+  }
+
   return (
-    <form action={formAction} className="card" style={{ marginBottom: 20 }}>
+    <form
+      action={async (formData) => {
+        await formAction(formData);
+        onSaved?.();
+      }}
+      className="card"
+      style={{ marginBottom: 20 }}
+    >
       <input type="hidden" name="month" value={month} />
       <input type="hidden" name="selectedPillars" value={selected.join(",")} />
 
@@ -32,6 +58,8 @@ export function MonthlyPlanForm({ month, monthLabel }: { month: string; monthLab
           rows={2}
           placeholder="Ex: terminar cardiologia, revisar neurologia 2x por semana, fazer 200 questões"
           required
+          value={mission}
+          onChange={(e) => setMission(e.target.value)}
         />
       </div>
 
@@ -59,14 +87,29 @@ export function MonthlyPlanForm({ month, monthLabel }: { month: string; monthLab
         </div>
       </div>
 
+      {selected.includes("outro") && (
+        <div className="field">
+          <label htmlFor="customPillarLabel">Nome do pilar personalizado</label>
+          <input
+            id="customPillarLabel"
+            name="customPillarLabel"
+            type="text"
+            required
+            value={customPillarLabel}
+            onChange={(e) => setCustomPillarLabel(e.target.value)}
+          />
+        </div>
+      )}
+
       {selected.length > 0 && (
         <div className="pillar-detail-list">
           {selected.map((key) => {
             const pillar = PILLAR_OPTIONS.find((p) => p.key === key)!;
+            const existing = pillarDefault(key);
             return (
               <div key={key} className="pillar-detail-card">
                 <b>
-                  {pillar.emoji} {pillar.label}
+                  {pillar.emoji} {key === "outro" ? customPillarLabel || "Outro" : pillar.label}
                 </b>
                 <div className="field">
                   <label htmlFor={`purpose_${key}`}>Propósito</label>
@@ -76,25 +119,17 @@ export function MonthlyPlanForm({ month, monthLabel }: { month: string; monthLab
                     type="text"
                     placeholder="Ex: Me sentir mais confiante"
                     required
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor={`objectives_${key}`}>Objetivos ou metas (um por linha)</label>
-                  <textarea
-                    id={`objectives_${key}`}
-                    name={`objectives_${key}`}
-                    rows={3}
-                    placeholder={"Me alimentar melhor\nTreinar\nAumentar meu conhecimento na área de atuação"}
+                    defaultValue={existing?.purpose}
                   />
                 </div>
                 <div className="field" style={{ marginBottom: 0 }}>
-                  <label htmlFor={`mainGoal_${key}`}>Meta principal desse pilar pro mês</label>
-                  <input
-                    id={`mainGoal_${key}`}
-                    name={`mainGoal_${key}`}
-                    type="text"
-                    placeholder="Ex: Ser aprovada nas finais"
-                    required
+                  <label htmlFor={`metas_${key}`}>Metas (uma por linha)</label>
+                  <textarea
+                    id={`metas_${key}`}
+                    name={`metas_${key}`}
+                    rows={3}
+                    placeholder={"Me alimentar melhor\nTreinar\nSer aprovada nas finais"}
+                    defaultValue={existing?.metas.join("\n")}
                   />
                 </div>
               </div>
@@ -105,7 +140,7 @@ export function MonthlyPlanForm({ month, monthLabel }: { month: string; monthLab
 
       {state.error && <p className="error-text">{state.error}</p>}
       <SubmitButton pendingText="Salvando..." className="btn btn-primary btn-sm">
-        Salvar planejamento
+        Guardar planejamento
       </SubmitButton>
     </form>
   );

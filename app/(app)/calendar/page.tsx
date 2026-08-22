@@ -1,172 +1,151 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/queries/profile";
-import { getMonthCalendar, getMonthlyPlan } from "@/lib/queries/calendar";
-import { RocketIcon } from "@/components/ui/RocketIcon";
-import { NewEventModal } from "@/components/calendar/NewEventModal";
-import { MonthlyPlanForm } from "@/components/calendar/MonthlyPlanForm";
-import { MonthlyPlanViewer } from "@/components/calendar/MonthlyPlanViewer";
-import { TASK_TYPE_LABEL, resolveTaskColor } from "@/lib/constants/calendar";
+import {
+  getMonthCalendar,
+  getWeekCalendar,
+  getAgendaAnchorDate,
+  getAgendaDay,
+  getMonthlyPlan,
+  getMonthlyPlanActions,
+  type CalendarItem,
+} from "@/lib/queries/calendar";
+import { listActiveSubjectsWithTopics } from "@/lib/queries/subjects";
+import { toLocalDateKey } from "@/lib/utils/format";
+import { CalendarShell } from "@/components/calendar/CalendarShell";
+import type { CalendarView } from "@/components/calendar/ViewSwitcher";
 
 const MONTH_NAMES_PT = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
-const WEEKDAYS_PT = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
-export default async function CalendarPage({
-  searchParams,
-}: PageProps<"/calendar">) {
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function mondayOf(dateKey: string): string {
+  const d = new Date(`${dateKey}T00:00:00`);
+  const diff = (d.getDay() + 6) % 7; // dias desde a última segunda (0=segunda)
+  d.setDate(d.getDate() - diff);
+  return toLocalDateKey(d);
+}
+
+function first(v: string | string[] | undefined): string | undefined {
+  return Array.isArray(v) ? v[0] : v;
+}
+
+export default async function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   const profile = await getCurrentUserProfile();
   if (!profile) redirect("/login");
 
   const now = new Date();
-  const { year: yearParam, month: monthParam, plan, day: dayParam } = await searchParams;
-  const year = Number(yearParam) || now.getFullYear();
-  const month = Number(monthParam) || now.getMonth() + 1;
-  const selectedDay = Number(dayParam) || null;
+  const sp = await searchParams;
 
-  const calendar = await getMonthCalendar(profile.userId, year, month);
+  const viewParam = first(sp.view);
+  const view: CalendarView = viewParam === "week" || viewParam === "agenda" ? viewParam : "month";
+  const hasExplicitView = Boolean(viewParam);
+
+  const year = Number(first(sp.year)) || now.getFullYear();
+  const month = Number(first(sp.month)) || now.getMonth() + 1;
+  const selectedDay = Number(first(sp.day)) || null;
+  const todayKey = toLocalDateKey(now);
+  const weekStart = first(sp.weekStart) || mondayOf(todayKey);
+  const agendaDateParam = first(sp.date) ?? null;
+
   const monthLabel = MONTH_NAMES_PT[month - 1];
-  const monthKey = `${year}-${String(month).padStart(2, "0")}-01`;
+  const monthKey = `${year}-${pad(month)}-01`;
+
+  const [subjects, monthlyPlan] = await Promise.all([
+    listActiveSubjectsWithTopics(profile.userId),
+    getMonthlyPlan(profile.userId, year, month),
+  ]);
+  const planActions = monthlyPlan ? await getMonthlyPlanActions(profile.userId, monthlyPlan.id) : [];
+  const planStartExpanded = first(sp.plan) === "1";
+
+  let monthCalendar = null;
+  let weekCalendar = null;
+  let agendaAnchorDateKey: string | null = null;
+  let agendaItems: CalendarItem[] = [];
+  const agendaIsSpecificDay = Boolean(agendaDateParam);
+
+  if (view === "month") {
+    monthCalendar = await getMonthCalendar(profile.userId, year, month);
+  } else if (view === "week") {
+    weekCalendar = await getWeekCalendar(profile.userId, weekStart);
+  } else {
+    agendaAnchorDateKey = agendaDateParam ?? (await getAgendaAnchorDate(profile.userId, todayKey));
+    if (agendaAnchorDateKey) agendaItems = await getAgendaDay(profile.userId, agendaAnchorDateKey);
+  }
 
   const prevMonth = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+  const prevWeek = (() => {
+    const d = new Date(`${weekStart}T00:00:00`);
+    d.setDate(d.getDate() - 7);
+    return toLocalDateKey(d);
+  })();
+  const nextWeek = (() => {
+    const d = new Date(`${weekStart}T00:00:00`);
+    d.setDate(d.getDate() + 7);
+    return toLocalDateKey(d);
+  })();
 
-  const showPlanForm = plan === "1" && !calendar.hasMonthlyPlan;
-  const monthlyPlan = calendar.hasMonthlyPlan ? await getMonthlyPlan(profile.userId, year, month) : null;
+  let prevHref = "#";
+  let nextHref = "#";
+  let todayHref = "/calendar";
+  let headerLabel = "";
 
-  const selectedDayEntry = selectedDay ? calendar.days.find((d) => d.day === selectedDay) : null;
+  if (view === "month") {
+    prevHref = `/calendar?view=month&year=${prevMonth.year}&month=${prevMonth.month}`;
+    nextHref = `/calendar?view=month&year=${nextMonth.year}&month=${nextMonth.month}`;
+    todayHref = `/calendar?view=month&year=${now.getFullYear()}&month=${now.getMonth() + 1}`;
+    headerLabel = `${monthLabel.charAt(0).toUpperCase()}${monthLabel.slice(1)} ${year}`;
+  } else if (view === "week") {
+    prevHref = `/calendar?view=week&weekStart=${prevWeek}`;
+    nextHref = `/calendar?view=week&weekStart=${nextWeek}`;
+    todayHref = `/calendar?view=week&weekStart=${mondayOf(todayKey)}`;
+    const weekEnd = weekCalendar?.days[6]?.dateKey ?? weekStart;
+    headerLabel = `${new Date(`${weekStart}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} – ${new Date(`${weekEnd}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`;
+  } else {
+    const anchor = agendaAnchorDateKey ?? todayKey;
+    const prevDay = (() => {
+      const d = new Date(`${anchor}T00:00:00`);
+      d.setDate(d.getDate() - 1);
+      return toLocalDateKey(d);
+    })();
+    const nextDay = (() => {
+      const d = new Date(`${anchor}T00:00:00`);
+      d.setDate(d.getDate() + 1);
+      return toLocalDateKey(d);
+    })();
+    prevHref = `/calendar?view=agenda&date=${prevDay}`;
+    nextHref = `/calendar?view=agenda&date=${nextDay}`;
+    todayHref = "/calendar?view=agenda";
+    headerLabel = "Agenda";
+  }
 
   return (
-    <div>
-      <div className="ritual-banner">
-        <div className="rb-left">
-          <div className="rb-icon">
-            <RocketIcon size={20} />
-          </div>
-          <div>
-            <b>Ritual de planejamento mensal</b>
-            <span>
-              {monthlyPlan
-                ? monthlyPlan.goals.mission
-                : `Defina suas metas de ${monthLabel} e deixe a rotina organizada automaticamente`}
-            </span>
-          </div>
-        </div>
-        {!calendar.hasMonthlyPlan && (
-          <Link href={`/calendar?year=${year}&month=${month}&plan=1`} className="btn btn-pink btn-sm">
-            Começar planejamento
-          </Link>
-        )}
-      </div>
-
-      {showPlanForm && <MonthlyPlanForm month={monthKey} monthLabel={monthLabel} />}
-      {monthlyPlan && <MonthlyPlanViewer plan={monthlyPlan} month={monthKey} monthLabel={monthLabel} />}
-
-      <div className="cal-toolbar" style={{ marginTop: 24 }}>
-        <div className="cal-nav">
-          <Link href={`/calendar?year=${prevMonth.year}&month=${prevMonth.month}`} aria-label="Mês anterior">
-            ‹
-          </Link>
-          <div className="cal-month">
-            {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)} {year}
-          </div>
-          <Link href={`/calendar?year=${nextMonth.year}&month=${nextMonth.month}`} aria-label="Próximo mês">
-            ›
-          </Link>
-        </div>
-        <div className="legend">
-          <div className="li">
-            <span className="dot" style={{ background: "var(--green)" }} /> Revisão
-          </div>
-          <div className="li">
-            <span className="dot" style={{ background: "var(--wine)" }} /> Prova/Simulado
-          </div>
-          <div className="li">
-            <span className="dot" style={{ background: "var(--coal)" }} /> Questões
-          </div>
-          <div className="li">
-            <span className="dot" style={{ background: "var(--pink)" }} /> Primeiro contato
-          </div>
-          <div className="li">
-            <span className="dot" style={{ background: "var(--amber)" }} /> Aula
-          </div>
-          <div className="li">
-            <span className="dot" style={{ background: "var(--wine-deep)" }} /> Planejamento
-          </div>
-        </div>
-      </div>
-
-      <NewEventModal />
-
-      <div className="cal-grid">
-        <div className="cal-weekdays">
-          {WEEKDAYS_PT.map((w) => (
-            <div key={w}>{w}</div>
-          ))}
-        </div>
-        <div className="cal-days">
-          {Array.from({ length: calendar.startWeekday }).map((_, i) => (
-            <div key={`empty-${i}`} className="cal-cell empty" />
-          ))}
-          {calendar.days.map((d) => (
-            <Link
-              key={d.dateKey}
-              href={`/calendar?year=${year}&month=${month}&day=${d.day}`}
-              className={`cal-cell clickable ${d.isToday ? "today" : ""} ${d.hasRitual ? "ritual-day" : ""} ${selectedDay === d.day ? "selected" : ""}`}
-            >
-              <div className="dnum">{String(d.day).padStart(2, "0")}</div>
-              {d.hasRitual && (
-                <div className="ritual-star">
-                  <RocketIcon size={12} />
-                </div>
-              )}
-              {d.tasks.map((t) => (
-                <div
-                  key={t.id}
-                  className={`cal-tag ${t.color ? "" : t.type}`}
-                  style={t.color ? { background: t.color } : undefined}
-                >
-                  {t.emoji ? `${t.emoji} ` : ""}
-                  {t.title}
-                </div>
-              ))}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {selectedDayEntry && (
-        <div className="card" style={{ marginTop: 20 }}>
-          <h2 className="section-title">
-            {selectedDayEntry.day} de {monthLabel}
-          </h2>
-          {selectedDayEntry.tasks.length === 0 ? (
-            <p style={{ fontSize: 13.5, color: "var(--text-muted)" }}>Nada programado pra esse dia.</p>
-          ) : (
-            <div className="day-detail-list">
-              {selectedDayEntry.tasks.map((t) => (
-                <div key={t.id} className="day-detail-row">
-                  <div className="dd-dot" style={{ background: resolveTaskColor(t) }} />
-                  <div className="dd-body">
-                    <b>
-                      {t.emoji ? `${t.emoji} ` : ""}
-                      {t.title}
-                    </b>
-                    <div className="dd-meta">
-                      <span>{TASK_TYPE_LABEL[t.type] ?? t.type}</span>
-                      {t.time && <span>🕐 {t.time.slice(0, 5)}</span>}
-                      {t.location && <span>📍 {t.location}</span>}
-                    </div>
-                    {t.notes && <div className="dd-notes">{t.notes}</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <CalendarShell
+      view={view}
+      hasExplicitView={hasExplicitView}
+      monthLabel={monthLabel}
+      monthKey={monthKey}
+      year={year}
+      month={month}
+      selectedDay={selectedDay}
+      monthCalendar={monthCalendar}
+      weekCalendar={weekCalendar}
+      agendaAnchorDateKey={agendaAnchorDateKey}
+      agendaItems={agendaItems}
+      agendaIsSpecificDay={agendaIsSpecificDay}
+      prevHref={prevHref}
+      nextHref={nextHref}
+      todayHref={todayHref}
+      headerLabel={headerLabel}
+      subjects={subjects}
+      monthlyPlan={monthlyPlan}
+      planActions={planActions}
+      planStartExpanded={planStartExpanded}
+    />
   );
 }

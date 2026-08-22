@@ -235,3 +235,26 @@ export async function listActiveSubjectsForMove(userId: string, excludeId?: stri
   const { data } = await query.order("name");
   return data ?? [];
 }
+
+export type SubjectWithTopicsOption = {
+  id: string;
+  name: string;
+  topics: { id: string; name: string }[];
+};
+
+// Disciplinas ativas com seus assuntos aninhados — alimenta os seletores
+// em cascata (Calendário, Planejamento mensal) onde o assunto é filtrado
+// pela disciplina escolhida. Disciplinas e assuntos arquivados ficam fora.
+export async function listActiveSubjectsWithTopics(userId: string): Promise<SubjectWithTopicsOption[]> {
+  const supabase = await createClient();
+  const [{ data: subjects }, { data: topics }] = await Promise.all([
+    supabase.from("subjects").select("id, name").eq("user_id", userId).is("archived_at", null).order("name"),
+    supabase.from("topics").select("id, name, subject_id").eq("user_id", userId).is("archived_at", null).order("name"),
+  ]);
+
+  return (subjects ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    topics: (topics ?? []).filter((t) => t.subject_id === s.id).map((t) => ({ id: t.id, name: t.name })),
+  }));
+}
