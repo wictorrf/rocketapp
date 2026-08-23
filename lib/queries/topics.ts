@@ -8,6 +8,7 @@ import {
   type StageLabel,
   type StoredSrsState,
 } from "@/lib/srs/fsrs";
+import { firstReviewPerCardPerDay, isRemembered, weightedAccuracyPct } from "@/lib/metrics/calc";
 
 export type TopicStatusFilter = "all" | "active" | "archived" | "pending" | "with_questions";
 export type TopicSortKey =
@@ -260,7 +261,9 @@ export type FlashcardWithState = {
   front: string;
   back: string;
   imageUrl: string | null;
+  imageAlt: string | null;
   backImageUrl: string | null;
+  backImageAlt: string | null;
   tags: string[];
   stage: StageLabel;
   suspended: boolean;
@@ -283,8 +286,11 @@ export type TopicPanel = {
   revisaoCount: number;
   reaprendizagemCount: number;
   suspensoCount: number;
+  atrasadosCount: number;
   dueTodayCount: number;
   studiedMinutes: number;
+  retentionPct: number | null;
+  retentionSampleCount: number;
   needsReview: FlashcardWithState[]; // atrasados/hoje + precisam de reforço, não suspensos
   consolidated: FlashcardWithState[];
   all: FlashcardWithState[]; // inclui suspensos — "Todos os flashcards deste assunto"
@@ -296,7 +302,7 @@ export async function getTopicPanel(topicId: string): Promise<TopicPanel> {
   const { data: flashcards } = await supabase
     .from("flashcards")
     .select(
-      "id, front, back, image_url, back_image_url, tags, flashcard_srs_state(state, due_at, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, last_review_at, suspended_at)",
+      "id, front, back, image_url, image_alt, back_image_url, back_image_alt, tags, flashcard_srs_state(state, due_at, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, last_review_at, suspended_at)",
     )
     .eq("topic_id", topicId)
     .order("created_at");
@@ -309,6 +315,8 @@ export async function getTopicPanel(topicId: string): Promise<TopicPanel> {
 
   const now = new Date();
   const nowIso = now.toISOString();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
   const withState: FlashcardWithState[] = (flashcards ?? []).map((f) => {
     const srs = Array.isArray(f.flashcard_srs_state) ? f.flashcard_srs_state[0] : f.flashcard_srs_state;
@@ -330,7 +338,9 @@ export async function getTopicPanel(topicId: string): Promise<TopicPanel> {
       front: f.front,
       back: f.back,
       imageUrl: f.image_url,
+      imageAlt: f.image_alt,
       backImageUrl: f.back_image_url,
+      backImageAlt: f.back_image_alt,
       tags: (f.tags as string[] | null) ?? [],
       stage: deriveStageLabel(stored.state, suspended),
       suspended,
@@ -352,6 +362,18 @@ export async function getTopicPanel(topicId: string): Promise<TopicPanel> {
     .sort((a, b) => a.dueAt.localeCompare(b.dueAt));
   const consolidated = active.filter((f) => f.consolidated);
 
+  // Retenção observada: mesma regra do módulo de Métricas (dedup por cartão
+  // e por dia local, % ponderada) — reaproveitada aqui pra nunca divergir.
+  const flashcardIds = withState.map((f) => f.id);
+  const { data: reviewLogs } = flashcardIds.length
+    ? await supabase.from("review_logs").select("flashcard_id, rating, reviewed_at").in("flashcard_id", flashcardIds)
+    : { data: [] as { flashcard_id: string; rating: number; reviewed_at: string }[] };
+  const dedupReviews = firstReviewPerCardPerDay(reviewLogs ?? [], (r) => r.flashcard_id, (r) => r.reviewed_at);
+  const retentionPct =
+    dedupReviews.length > 0
+      ? weightedAccuracyPct(dedupReviews.filter((r) => isRemembered(r.rating)).length, dedupReviews.length)
+      : null;
+
   return {
     totalFlashcards: active.length,
     reviewedAtLeastOnce: withState.filter((f) => f.reps > 0).length,
@@ -360,8 +382,14 @@ export async function getTopicPanel(topicId: string): Promise<TopicPanel> {
     revisaoCount: active.filter((f) => f.stage === "revisao").length,
     reaprendizagemCount: active.filter((f) => f.stage === "reaprendizagem").length,
     suspensoCount: withState.filter((f) => f.suspended).length,
-    dueTodayCount: active.filter((f) => f.dueAt <= nowIso).length,
+    atrasadosCount: active.filter((f) => new Date(f.dueAt) < startOfToday).length,
+    dueTodayCount: active.filter((f) => {
+      const dueAt = new Date(f.dueAt);
+      return dueAt >= startOfToday && dueAt <= endOfToday;
+    }).length,
     studiedMinutes,
+    retentionPct,
+    retentionSampleCount: dedupReviews.length,
     needsReview,
     consolidated,
     all: withState,

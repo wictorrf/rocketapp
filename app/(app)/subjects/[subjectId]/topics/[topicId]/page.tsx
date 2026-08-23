@@ -6,10 +6,10 @@ import { getQuestionLogSummary } from "@/lib/queries/questions";
 import { getSignedUrls } from "@/lib/queries/storage";
 import { formatHours } from "@/lib/utils/format";
 import { FlashcardRow } from "@/components/subjects/FlashcardRow";
+import { FlashcardSection } from "@/components/subjects/FlashcardSection";
 import { NewQuestionLogButton } from "@/components/subjects/NewQuestionLogButton";
 import { QuestionLogList } from "@/components/subjects/QuestionLogList";
 import { RetentionCurve } from "@/components/subjects/RetentionCurve";
-import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { startReviewSessionAction } from "@/lib/actions/review";
 
 export default async function TopicDetailPage({
@@ -27,10 +27,14 @@ export default async function TopicDetailPage({
   if (!topic) notFound();
 
   const panel = await getTopicPanel(topicId);
-  const imagePaths = panel.all
+  // Só assina de uma vez as imagens das seções abertas por padrão
+  // (Precisa de revisão + Consolidados). "Todos os flashcards" começa
+  // fechado e assina sob demanda ao ser aberto pela primeira vez — evita
+  // gastar assinatura de Storage com imagens que a pessoa nunca chega a ver.
+  const eagerImagePaths = [...panel.needsReview, ...panel.consolidated]
     .flatMap((f) => [f.imageUrl, f.backImageUrl])
     .filter((p): p is string => Boolean(p));
-  const signedUrls = await getSignedUrls("flashcard-images", imagePaths);
+  const signedUrls = await getSignedUrls("flashcard-images", eagerImagePaths);
   const withSignedUrl = (f: (typeof panel.all)[number]) => ({
     ...f,
     imageUrl: f.imageUrl ? (signedUrls.get(f.imageUrl) ?? null) : null,
@@ -97,24 +101,40 @@ export default async function TopicDetailPage({
               <b style={{ color: "var(--text-muted)" }}>{panel.suspensoCount}</b>
             </div>
             <div className="sd-sum-item">
+              <span>Atrasados</span>
+              <b style={{ color: "var(--wine-bright)" }}>{panel.atrasadosCount}</b>
+            </div>
+            <div className="sd-sum-item">
+              <span>Retenção observada</span>
+              {panel.retentionPct === null ? (
+                <b style={{ fontSize: 14, fontFamily: "var(--font-body)" }}>Ainda sem dados suficientes</b>
+              ) : (
+                <b>{panel.retentionPct}%</b>
+              )}
+            </div>
+            <div className="sd-sum-item">
               <span>Tempo dedicado</span>
               <b>{formatHours(panel.studiedMinutes)}</b>
             </div>
             <div className="sd-sum-item sd-next">
-              <span>Próxima revisão prevista</span>
-              <b>{panel.dueTodayCount > 0 ? `Hoje, ${panel.dueTodayCount} cartões` : "Nada previsto pra hoje"}</b>
+              <span>Revisar hoje</span>
+              <b>
+                {panel.atrasadosCount + panel.dueTodayCount > 0
+                  ? `Hoje, ${panel.atrasadosCount + panel.dueTodayCount} cartões`
+                  : "Você está em dia com suas revisões"}
+              </b>
             </div>
           </div>
 
           {panel.totalFlashcards > 0 && (
             <div className="card ebbinghaus-card">
               <h2 className="section-title">Curva de retenção deste assunto</h2>
-              <RetentionCurve cards={panel.all.map(withSignedUrl)} />
+              <RetentionCurve cards={panel.all} />
             </div>
           )}
 
           <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-            {panel.dueTodayCount > 0 && (
+            {panel.atrasadosCount + panel.dueTodayCount > 0 && (
               <form action={startReviewSessionAction}>
                 <input type="hidden" name="subjectId" value={subjectId} />
                 <input type="hidden" name="topicId" value={topicId} />
@@ -125,7 +145,7 @@ export default async function TopicDetailPage({
             )}
             <Link
               href={`/subjects/${subjectId}/topics/${topicId}/flashcards/new`}
-              className={panel.dueTodayCount > 0 ? "btn btn-ghost" : "btn btn-primary"}
+              className={panel.atrasadosCount + panel.dueTodayCount > 0 ? "btn btn-ghost" : "btn btn-primary"}
             >
               Novo flashcard
             </Link>
@@ -143,31 +163,23 @@ export default async function TopicDetailPage({
             ))}
           </div>
 
-          <CollapsibleSection title="Consolidados">
-            <div className="fc-list">
-              {panel.consolidated.length === 0 && (
-                <div className="card" style={{ textAlign: "center", color: "var(--text-muted)" }}>
-                  Nenhum cartão consolidado ainda. Continue revisando para fortalecer sua memória.
-                </div>
-              )}
-              {panel.consolidated.map((f) => (
-                <FlashcardRow key={f.id} subjectId={subjectId} topicId={topicId} card={withSignedUrl(f)} />
-              ))}
-            </div>
-          </CollapsibleSection>
+          <FlashcardSection
+            title="Consolidados"
+            emptyMessage="Nenhum cartão consolidado ainda. Continue revisando para fortalecer sua memória."
+            cards={panel.consolidated.map(withSignedUrl)}
+            subjectId={subjectId}
+            topicId={topicId}
+          />
 
-          <CollapsibleSection title="Todos os flashcards deste assunto" defaultOpen={false}>
-            <div className="fc-list">
-              {panel.all.length === 0 && (
-                <div className="card" style={{ textAlign: "center", color: "var(--text-muted)" }}>
-                  Nenhum flashcard criado neste assunto.
-                </div>
-              )}
-              {panel.all.map((f) => (
-                <FlashcardRow key={f.id} subjectId={subjectId} topicId={topicId} card={withSignedUrl(f)} />
-              ))}
-            </div>
-          </CollapsibleSection>
+          <FlashcardSection
+            title="Todos os flashcards deste assunto"
+            defaultOpen={false}
+            emptyMessage="Nenhum flashcard criado neste assunto."
+            cards={panel.all}
+            subjectId={subjectId}
+            topicId={topicId}
+            lazySign
+          />
         </>
       ) : (
         <>

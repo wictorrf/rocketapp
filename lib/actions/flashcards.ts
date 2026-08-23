@@ -5,7 +5,19 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeFlashcardHtml, htmlToPlainText } from "@/lib/utils/sanitize-html";
 import { checkPossibleDuplicate, listActiveTopicsForFlashcardMove, searchFlashcardsByContent } from "@/lib/queries/flashcards";
+import { getSignedUrls } from "@/lib/queries/storage";
 import { resetProgress } from "@/lib/srs/fsrs";
+
+// Assina imagens de flashcard sob demanda (ex: ao expandir "Todos os
+// flashcards deste assunto") em vez de assinar tudo de uma vez no
+// carregamento da página. O cliente só manda paths — o Storage aplica a RLS
+// de "só a dona lê os próprios arquivos", então um path de outra pessoa
+// simplesmente não vem assinado de volta.
+export async function getSignedImageUrlsAction(paths: string[]): Promise<Record<string, string>> {
+  const unique = Array.from(new Set(paths.filter(Boolean)));
+  const map = await getSignedUrls("flashcard-images", unique);
+  return Object.fromEntries(map);
+}
 
 export type ActionState = { error: string | null };
 export type FlashcardActionState = ActionState & { duplicate?: { id: string; frontPreview: string } | null };

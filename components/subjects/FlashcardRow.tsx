@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { KebabMenu } from "@/components/ui/KebabMenu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { MoveFlashcardDialog } from "./MoveFlashcardDialog";
+import { FlashcardPreview } from "./FlashcardPreview";
 import {
   duplicateFlashcardAction,
   suspendFlashcardAction,
@@ -31,6 +32,7 @@ export function FlashcardRow({
   const [moving, setMoving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [viewing, setViewing] = useState(false);
   const [pending, setPending] = useState(false);
 
   const overdue = !card.suspended && isOverdue(card.dueAt);
@@ -80,6 +82,8 @@ export function FlashcardRow({
               : overdue
                 ? "Revisão atrasada"
                 : `Próxima revisão ${formatDueIn(card.dueAt)}`}
+            {` · ${card.reps} revis${card.reps === 1 ? "ão" : "ões"}`}
+            {card.lapses > 0 && `, ${card.lapses} esquecimento${card.lapses === 1 ? "" : "s"}`}
             {card.tags.length > 0 && ` · ${card.tags.join(", ")}`}
           </span>
         </div>
@@ -92,6 +96,7 @@ export function FlashcardRow({
         ariaLabel="Mais opções do flashcard"
         actions={[
           { label: "Editar", onClick: () => router.push(editHref) },
+          { label: "Ver", onClick: () => setViewing(true) },
           { label: "Mover", onClick: () => setMoving(true) },
           { label: "Duplicar", onClick: handleDuplicate },
           { label: card.suspended ? "Reativar" : "Suspender", onClick: handleSuspendToggle },
@@ -134,6 +139,18 @@ export function FlashcardRow({
           pending={pending}
           onConfirm={handleDelete}
           onCancel={() => setDeleting(false)}
+        />
+      )}
+
+      {viewing && (
+        <FlashcardPreview
+          front={card.front}
+          back={card.back}
+          imageUrl={card.imageUrl}
+          imageAlt={card.imageAlt ?? ""}
+          backImageUrl={card.backImageUrl}
+          backImageAlt={card.backImageAlt ?? ""}
+          onClose={() => setViewing(false)}
         />
       )}
     </div>
