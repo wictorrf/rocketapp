@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { toLocalDateKey } from "@/lib/utils/format";
-import { Rating } from "@/lib/srs/fsrs";
+import { isRemembered, weightedAccuracyPct } from "@/lib/metrics/calc";
 
 const WEEKDAY_LETTERS_PT = ["S", "T", "Q", "Q", "S", "S", "D"]; // Seg..Dom
 
@@ -79,7 +79,7 @@ export async function getPriorityTask(userId: string): Promise<PriorityTask | nu
     const stat = topicStats.get(topicId);
     if (!stat) continue;
     stat.total += 1;
-    if (log.rating > Rating.Again) stat.remembered += 1;
+    if (isRemembered(log.rating)) stat.remembered += 1;
   }
 
   let best: { topicId: string; accuracy: number; oldestDueAt: string } | null = null;
@@ -166,10 +166,10 @@ export async function getPerformanceDropInsight(userId: string): Promise<Perform
     const isRecent = new Date(log.reviewed_at) >= fourteenDaysAgo;
     if (isRecent) {
       stat.recentTotal += 1;
-      if (log.rating > Rating.Again) stat.recentRemembered += 1;
+      if (isRemembered(log.rating)) stat.recentRemembered += 1;
     } else {
       stat.olderTotal += 1;
-      if (log.rating > Rating.Again) stat.olderRemembered += 1;
+      if (isRemembered(log.rating)) stat.olderRemembered += 1;
     }
     bySubject.set(subjectId, stat);
   }
@@ -222,7 +222,7 @@ export async function getWeekStats(userId: string): Promise<WeekStats> {
   return {
     studiedMinutes,
     questionsDone,
-    questionsAccuracyPct: questionsDone ? Math.round((questionsCorrect / questionsDone) * 100) : null,
+    questionsAccuracyPct: weightedAccuracyPct(questionsCorrect, questionsDone),
   };
 }
 

@@ -1,206 +1,76 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/queries/profile";
-import { getMetrics, type MetricsPeriod } from "@/lib/queries/metrics";
-import { formatHours } from "@/lib/utils/format";
-import { PieChart } from "@/components/metrics/PieChart";
+import {
+  getMetricsFilterOptions,
+  getFlashcardMetrics,
+  getQuestionMetrics,
+  getStudyTimeMetrics,
+  getFocusSuggestions,
+  resolvePeriodRange,
+  type MetricsPeriod,
+  type MetricsFilters,
+} from "@/lib/queries/metrics";
+import { PeriodSelector } from "@/components/metrics/PeriodSelector";
+import { MetricsFiltersBar } from "@/components/metrics/MetricsFiltersBar";
+import { FlashcardsSection } from "@/components/metrics/FlashcardsSection";
+import { QuestionsSection } from "@/components/metrics/QuestionsSection";
+import { StudyTimeSection } from "@/components/metrics/StudyTimeSection";
+import { FocusSuggestionsList } from "@/components/metrics/FocusSuggestionsList";
 
-const PERIOD_LABEL: Record<MetricsPeriod, string> = {
-  week: "Semana",
-  month: "Mês",
-  all: "Desde o início",
-};
-
-function rankClass(pct: number) {
-  if (pct < 70) return "low";
-  if (pct < 85) return "mid";
-  return "high";
-}
+const VALID_PERIODS: MetricsPeriod[] = ["week", "month", "year", "all"];
 
 export default async function MetricsPage({ searchParams }: PageProps<"/metrics">) {
   const profile = await getCurrentUserProfile();
   if (!profile) redirect("/login");
 
-  const { period: periodParam } = await searchParams;
-  const period: MetricsPeriod = ["week", "month", "all"].includes(String(periodParam))
-    ? (periodParam as MetricsPeriod)
-    : "week";
+  const sp = await searchParams;
+  const periodRaw = one(sp.period);
+  const period: MetricsPeriod = VALID_PERIODS.includes(periodRaw as MetricsPeriod) ? (periodRaw as MetricsPeriod) : "week";
+  const hasExplicitPeriod = Boolean(periodRaw);
 
-  const metrics = await getMetrics(profile.userId, period);
+  const now = new Date();
+  const year = Number(one(sp.year)) || now.getFullYear();
+  const month = Number(one(sp.month)) || now.getMonth() + 1;
+  const weekDateKey = one(sp.date) || now.toISOString().slice(0, 10);
 
-  const reviewsMax = Math.max(1, ...metrics.reviewsByDay.map((d) => d.value));
-  const minutesMax = Math.max(1, ...metrics.studiedMinutesByDay.map((d) => d.value));
-  const stageTotal =
-    metrics.stageDistribution.novo +
-    metrics.stageDistribution.aprendendo +
-    metrics.stageDistribution.revisao +
-    metrics.stageDistribution.reaprendizagem +
-    metrics.stageDistribution.suspenso;
+  const filters: MetricsFilters = {
+    subjectId: one(sp.subjectId) || null,
+    topicId: one(sp.topicId) || null,
+    activityType: one(sp.activityType) || null,
+  };
+
+  const range = resolvePeriodRange(period, { year, month, weekDateKey });
+
+  const [filterOptions, flashcardMetrics, questionMetrics, studyTimeMetrics, focusSuggestions] = await Promise.all([
+    getMetricsFilterOptions(profile.userId),
+    getFlashcardMetrics(profile.userId, period, range, filters),
+    getQuestionMetrics(profile.userId, period, range, filters),
+    getStudyTimeMetrics(profile.userId, period, range, filters),
+    getFocusSuggestions(profile.userId, range, filters),
+  ]);
+
+  const focusTitle = period === "week" ? "Onde focar esta semana" : period === "month" ? "Onde focar este mês" : period === "year" ? "Onde focar este ano" : "Onde focar";
 
   return (
     <div>
-      <div className="metric-tabs">
-        {(["week", "month", "all"] as MetricsPeriod[]).map((p) => (
-          <Link key={p} href={`/metrics?period=${p}`} className={period === p ? "active" : ""}>
-            {PERIOD_LABEL[p]}
-          </Link>
-        ))}
-      </div>
+      <h2 className="section-title">Métricas</h2>
 
-      <h2 className="section-title" style={{ marginTop: 4 }}>
-        Flashcards
-      </h2>
-      <div className="grid cols-3" style={{ marginBottom: 20 }}>
-        <div className="card">
-          <div className="eyebrow">Revisados em {PERIOD_LABEL[period].toLowerCase()}</div>
-          <div className="stat-num">{metrics.flashcardsReviewed}</div>
-          <div className="stat-label">flashcards, todas as disciplinas</div>
-        </div>
-        <div className="card">
-          <div className="eyebrow">Taxa de retenção</div>
-          <div className="stat-num" style={{ color: "var(--green)" }}>
-            {metrics.retentionPct !== null ? `${metrics.retentionPct}%` : "—"}
-          </div>
-          <div className="stat-label">lembrou fácil ou com esforço</div>
-        </div>
-        <div className="card-dark">
-          <div className="eyebrow">Revisões previstas hoje</div>
-          <div className="stat-num" style={{ color: "var(--pink)" }}>
-            {metrics.dueTodayCount}
-          </div>
-          <div className="stat-label" style={{ color: "rgba(255,255,255,0.6)" }}>
-            calculado pela curva de revisão
-          </div>
-        </div>
-      </div>
+      <PeriodSelector period={period} hasExplicitPeriod={hasExplicitPeriod} year={year} month={month} weekDateKey={weekDateKey} rangeLabel={range.rangeLabel} />
+      <MetricsFiltersBar subjects={filterOptions} subjectId={filters.subjectId} topicId={filters.topicId} activityType={filters.activityType} />
 
-      <div className="grid cols-2" style={{ marginBottom: 28 }}>
-        <div className="card">
-          <h2 className="section-title">Flashcards revisados por dia</h2>
-          <div className="chart-placeholder">
-            {metrics.reviewsByDay.map((d) => (
-              <div
-                key={d.date}
-                className="bar"
-                style={{
-                  height: `${Math.max(4, (d.value / reviewsMax) * 100)}%`,
-                  background: "linear-gradient(180deg, var(--pink), var(--wine-deep))",
-                }}
-              >
-                <span>{d.value}</span>
-              </div>
-            ))}
-          </div>
-          <div className="chart-x">
-            {metrics.reviewsByDay.map((d, i) => (
-              <span key={i}>{d.label}</span>
-            ))}
-          </div>
-        </div>
+      <FlashcardsSection metrics={flashcardMetrics} />
+      <div style={{ height: 28 }} />
+      <QuestionsSection metrics={questionMetrics} />
+      <div style={{ height: 28 }} />
+      <StudyTimeSection metrics={studyTimeMetrics} />
 
-        <div className="card">
-          <h2 className="section-title">Estágio dos seus cartões</h2>
-          <div className="weak-point low">
-            <div className="wp-rank" style={{ color: "var(--wine)" }}>●</div>
-            <div className="wp-name">Novos</div>
-            <div className="wp-pct" style={{ color: "var(--wine)" }}>{metrics.stageDistribution.novo}</div>
-          </div>
-          <div className="weak-point mid">
-            <div className="wp-rank" style={{ color: "var(--amber)" }}>●</div>
-            <div className="wp-name">Em aprendizagem</div>
-            <div className="wp-pct" style={{ color: "var(--amber)" }}>{metrics.stageDistribution.aprendendo}</div>
-          </div>
-          <div className="weak-point high">
-            <div className="wp-rank" style={{ color: "var(--green)" }}>●</div>
-            <div className="wp-name">Em revisão</div>
-            <div className="wp-pct" style={{ color: "var(--green)" }}>{metrics.stageDistribution.revisao}</div>
-          </div>
-          <div className="weak-point mid">
-            <div className="wp-rank" style={{ color: "#6b5a9e" }}>●</div>
-            <div className="wp-name">Em reaprendizagem</div>
-            <div className="wp-pct" style={{ color: "#6b5a9e" }}>{metrics.stageDistribution.reaprendizagem}</div>
-          </div>
-          <div className="weak-point low">
-            <div className="wp-rank" style={{ color: "var(--text-muted)" }}>●</div>
-            <div className="wp-name">Suspensos</div>
-            <div className="wp-pct" style={{ color: "var(--text-muted)" }}>{metrics.stageDistribution.suspenso}</div>
-          </div>
-          {stageTotal === 0 && (
-            <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 10 }}>
-              Crie flashcards para começar a acompanhar essa distribuição.
-            </p>
-          )}
-        </div>
-      </div>
-
-      <h2 className="section-title">Questões e simulados</h2>
-      <div className="grid cols-3" style={{ marginBottom: 20 }}>
-        <div className="card">
-          <div className="eyebrow">Questões feitas</div>
-          <div className="stat-num">{metrics.questionsSummary.done}</div>
-          <div className="stat-label">em {PERIOD_LABEL[period].toLowerCase()}</div>
-        </div>
-        <div className="card">
-          <div className="eyebrow">Acertos</div>
-          <div className="stat-num">{metrics.questionsSummary.correct}</div>
-          <div className="stat-label">registrados manualmente</div>
-        </div>
-        <div className="card">
-          <div className="eyebrow">% de acerto</div>
-          <div className="stat-num">
-            {metrics.questionsSummary.accuracyPct !== null ? `${metrics.questionsSummary.accuracyPct}%` : "—"}
-          </div>
-          <div className="stat-label">separado dos flashcards</div>
-        </div>
-      </div>
-
-      <div className="grid cols-2">
-        <div className="card">
-          <h2 className="section-title">Horas líquidas de estudo</h2>
-          <div className="chart-placeholder">
-            {metrics.studiedMinutesByDay.map((d) => (
-              <div key={d.date} className="bar" style={{ height: `${Math.max(4, (d.value / minutesMax) * 100)}%` }}>
-                <span>{formatHours(d.value)}</span>
-              </div>
-            ))}
-          </div>
-          <div className="chart-x">
-            {metrics.studiedMinutesByDay.map((d, i) => (
-              <span key={i}>{d.label}</span>
-            ))}
-          </div>
-        </div>
-
-        <div className="card">
-          <h2 className="section-title">Onde focar essa {period === "week" ? "semana" : PERIOD_LABEL[period].toLowerCase()}</h2>
-          {metrics.weakestSubjects.length === 0 && (
-            <p style={{ fontSize: 13.5, color: "var(--text-muted)" }}>
-              Ainda não há revisões suficientes nesse período para montar o ranking.
-            </p>
-          )}
-          {metrics.weakestSubjects.map((s, i) => (
-            <div key={s.subjectId} className={`weak-point ${rankClass(s.accuracyPct)}`}>
-              <div className="wp-rank">{String(i + 1).padStart(2, "0")}</div>
-              <div className="wp-name">{s.subjectName}</div>
-              <div className="wp-pct">{s.accuracyPct}%</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid cols-2" style={{ marginTop: 18 }}>
-        <div className="card">
-          <h2 className="section-title">Tempo de estudo por matéria</h2>
-          <PieChart slices={metrics.timeBySubject} emptyLabel="Sem sessões de Study Time nesse período ainda." />
-        </div>
-        <div className="card">
-          <h2 className="section-title">Tempo por tipo de atividade</h2>
-          <PieChart
-            slices={metrics.timeByActivity}
-            emptyLabel="Sem sessões de foco ou revisão registradas nesse período ainda."
-          />
-        </div>
-      </div>
+      <div style={{ height: 28 }} />
+      <h2 className="section-title">{focusTitle}</h2>
+      <FocusSuggestionsList suggestions={focusSuggestions} />
     </div>
   );
+}
+
+function one(v: string | string[] | undefined): string {
+  return Array.isArray(v) ? (v[0] ?? "") : (v ?? "");
 }

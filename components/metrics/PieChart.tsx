@@ -1,9 +1,28 @@
+import Link from "next/link";
 import type { PieSlice } from "@/lib/queries/metrics";
+import { formatStudyDuration } from "@/lib/metrics/calc";
 
-export function PieChart({ slices, emptyLabel }: { slices: PieSlice[]; emptyLabel: string }) {
+export function PieChart({
+  slices,
+  emptyLabel,
+  emptyHref,
+  emptyActionLabel,
+}: {
+  slices: PieSlice[];
+  emptyLabel: string;
+  emptyHref?: string;
+  emptyActionLabel?: string;
+}) {
   if (slices.length === 0) {
     return (
-      <p style={{ fontSize: 13.5, color: "var(--text-muted)", padding: "20px 0" }}>{emptyLabel}</p>
+      <div style={{ padding: "20px 0" }}>
+        <p style={{ fontSize: 13.5, color: "var(--text-muted)", marginBottom: emptyHref ? 12 : 0 }}>{emptyLabel}</p>
+        {emptyHref && emptyActionLabel && (
+          <Link href={emptyHref} className="btn btn-ghost btn-sm">
+            {emptyActionLabel}
+          </Link>
+        )}
+      </div>
     );
   }
 
@@ -22,9 +41,18 @@ export function PieChart({ slices, emptyLabel }: { slices: PieSlice[]; emptyLabe
       <div className="pie-chart" style={{ background: `conic-gradient(${stops})` }} />
       <div className="pie-legend">
         {slices.map((s) => (
-          <div key={s.label} className="pl-item">
+          <div
+            key={s.key}
+            className="pl-item"
+            title={`${s.label}, ${formatStudyDuration(s.minutes)}, ${s.pct}%, ${s.sessionsCount} ${s.sessionsCount === 1 ? "sessão" : "sessões"}`}
+          >
             <span className="sw" style={{ background: s.color }} />
-            <span>{s.label}</span>
+            <span>
+              {s.label}
+              <em>
+                {formatStudyDuration(s.minutes)} · {s.sessionsCount} {s.sessionsCount === 1 ? "sessão" : "sessões"}
+              </em>
+            </span>
             <b>{s.pct}%</b>
           </div>
         ))}
