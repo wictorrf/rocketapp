@@ -9,7 +9,6 @@ import {
   createEmptyCard,
   fsrs,
   generatorParameters,
-  computeDecayFactor,
   forgetting_curve,
   Rating,
   State,
@@ -130,10 +129,11 @@ export function retrievability(stored: StoredSrsState, now: Date = new Date()): 
 
 // Curva de decaimento pra um dado "stability" — usada pra desenhar a curva
 // de retenção do assunto (referência), não o estado real de um cartão.
-const { decay: FSRS_DECAY } = computeDecayFactor(params.w);
-
+// forgetting_curve já chama computeDecayFactor internamente — passar um
+// decay pré-computado (em vez de params.w) inverte o sinal de novo lá
+// dentro e vira NaN pra elapsedDays maiores em relação à stability.
 export function retentionPctAt(elapsedDays: number, stabilityDays: number): number {
-  return forgetting_curve(FSRS_DECAY, elapsedDays, Math.max(stabilityDays, 0.01)) * 100;
+  return forgetting_curve(params.w, elapsedDays, Math.max(stabilityDays, 0.01)) * 100;
 }
 
 function formatInterval(scheduledDays: number): string {

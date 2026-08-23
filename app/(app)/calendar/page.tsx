@@ -77,6 +77,20 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
     if (agendaAnchorDateKey) agendaItems = await getAgendaDay(profile.userId, agendaAnchorDateKey);
   }
 
+  // Data de referência do que está sendo visto agora — usada pelo
+  // ViewSwitcher pra abrir a view seguinte (mês/semana/agenda) já no
+  // período certo, em vez de sempre voltar pra hoje.
+  const referenceDateKey =
+    view === "week"
+      ? weekStart
+      : view === "agenda"
+        ? (agendaAnchorDateKey ?? todayKey)
+        : selectedDay
+          ? `${year}-${pad(month)}-${pad(selectedDay)}`
+          : year === now.getFullYear() && month === now.getMonth() + 1
+            ? todayKey
+            : `${year}-${pad(month)}-01`;
+
   const prevMonth = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
   const prevWeek = (() => {
@@ -146,6 +160,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
       monthlyPlan={monthlyPlan}
       planActions={planActions}
       planStartExpanded={planStartExpanded}
+      referenceDateKey={referenceDateKey}
     />
   );
 }

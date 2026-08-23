@@ -104,7 +104,10 @@ export function MonthlyPlanForm({
       {selected.length > 0 && (
         <div className="pillar-detail-list">
           {selected.map((key) => {
-            const pillar = PILLAR_OPTIONS.find((p) => p.key === key)!;
+            // Pilares são salvos por key num jsonb, sem checagem no banco —
+            // um planejamento antigo pode referenciar uma key que não existe
+            // mais em PILLAR_OPTIONS (ex: lista de pilares foi alterada).
+            const pillar = PILLAR_OPTIONS.find((p) => p.key === key) ?? { key, label: key, emoji: "🎯" };
             const existing = pillarDefault(key);
             return (
               <div key={key} className="pillar-detail-card">
@@ -129,7 +132,7 @@ export function MonthlyPlanForm({
                     name={`metas_${key}`}
                     rows={3}
                     placeholder={"Me alimentar melhor\nTreinar\nSer aprovada nas finais"}
-                    defaultValue={existing?.metas.join("\n")}
+                    defaultValue={existing?.metas?.join("\n")}
                   />
                 </div>
               </div>

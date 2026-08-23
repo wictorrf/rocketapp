@@ -35,6 +35,7 @@ export function CalendarShell({
   monthlyPlan,
   planActions,
   planStartExpanded,
+  referenceDateKey,
 }: {
   view: CalendarView;
   hasExplicitView: boolean;
@@ -56,6 +57,7 @@ export function CalendarShell({
   monthlyPlan: MonthlyPlan | null;
   planActions: MonthlyPlanAction[];
   planStartExpanded: boolean;
+  referenceDateKey: string;
 }) {
   const router = useRouter();
   const [selectedEvent, setSelectedEvent] = useState<CalendarItem | null>(null);
@@ -100,7 +102,7 @@ export function CalendarShell({
             Hoje
           </Link>
         </div>
-        <ViewSwitcher current={view} hasExplicitView={hasExplicitView} />
+        <ViewSwitcher current={view} hasExplicitView={hasExplicitView} referenceDateKey={referenceDateKey} />
       </div>
 
       <div className="cal-toolbar">

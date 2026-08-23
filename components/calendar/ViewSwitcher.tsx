@@ -11,7 +11,25 @@ const VIEWS: { value: CalendarView; label: string }[] = [
   { value: "agenda", label: "Agenda" },
 ];
 
-export function ViewSwitcher({ current, hasExplicitView }: { current: CalendarView; hasExplicitView: boolean }) {
+// Segunda-feira da semana que contém dateKey — mesma lógica usada em
+// app/(app)/calendar/page.tsx, duplicada aqui por ser puro e este ser um
+// componente client-side.
+function mondayOf(dateKey: string): string {
+  const d = new Date(`${dateKey}T00:00:00`);
+  const diff = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - diff);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function ViewSwitcher({
+  current,
+  hasExplicitView,
+  referenceDateKey,
+}: {
+  current: CalendarView;
+  hasExplicitView: boolean;
+  referenceDateKey: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -31,6 +49,17 @@ export function ViewSwitcher({ current, hasExplicitView }: { current: CalendarVi
     const params = new URLSearchParams(searchParams.toString());
     params.set("view", view);
     params.delete("day");
+    // Leva a data que estava sendo vista pra view seguinte — sem isso, a
+    // Semana sempre abria na semana de hoje (e o Mês sempre no mês atual),
+    // não importa o que estivesse selecionado antes, dando a impressão de
+    // que os eventos "sumiam" ao trocar de visualização.
+    if (view === "week") {
+      params.set("weekStart", mondayOf(referenceDateKey));
+    } else if (view === "month") {
+      const d = new Date(`${referenceDateKey}T00:00:00`);
+      params.set("year", String(d.getFullYear()));
+      params.set("month", String(d.getMonth() + 1));
+    }
     router.push(`/calendar?${params.toString()}`);
   }
 

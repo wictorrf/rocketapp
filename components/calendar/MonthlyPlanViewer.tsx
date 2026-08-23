@@ -64,7 +64,7 @@ export function MonthlyPlanViewer({
             {PILLAR_EMOJI[pillar.key] ?? "🎯"} {pillar.key === "outro" ? pillar.customLabel || "Outro" : (PILLAR_LABEL[pillar.key] ?? pillar.key)}
           </b>
           {pillar.purpose && <div className="plan-purpose">Propósito: {pillar.purpose}</div>}
-          {pillar.metas.length > 0 && (
+          {pillar.metas?.length > 0 && (
             <ul>
               {pillar.metas.map((meta, i) => (
                 <li key={i}>{meta}</li>
