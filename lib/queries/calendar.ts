@@ -503,22 +503,20 @@ export async function getMonthlyPlanActions(userId: string, planId: string): Pro
   }));
 }
 
-export type UpcomingExam = {
-  id: string;
-  title: string;
-  date: string;
-  daysUntil: number;
-};
+export type UpcomingExam = CalendarItem & { daysUntil: number };
 
-export async function getUpcomingExams(userId: string, limit = 5): Promise<UpcomingExam[]> {
+// Provas e compromissos futuros pro card "Próximas provas e compromissos" do
+// Dashboard — devolve o CalendarItem completo (não só um resumo) pra dar pra
+// abrir o mesmo EventFormPanel do Calendário direto a partir do card.
+export async function getUpcomingExamsAndCommitments(userId: string, limit = 5): Promise<UpcomingExam[]> {
   const supabase = await createClient();
   const todayKey = toLocalDateKey(new Date());
 
   const { data } = await supabase
     .from("calendar_tasks")
-    .select("id, title, scheduled_date")
+    .select(TASK_SELECT)
     .eq("user_id", userId)
-    .eq("type", "prova")
+    .in("type", ["prova", "compromisso"])
     .neq("status", "cancelled")
     .gte("scheduled_date", todayKey)
     .order("scheduled_date", { ascending: true })
@@ -527,9 +525,10 @@ export async function getUpcomingExams(userId: string, limit = 5): Promise<Upcom
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  return (data ?? []).map((t) => {
-    const examDate = new Date(`${t.scheduled_date}T00:00:00`);
+  return ((data ?? []) as unknown as RawTaskRow[]).map((row) => {
+    const item = rowToItem(row);
+    const examDate = new Date(`${item.scheduledDate}T00:00:00`);
     const daysUntil = Math.round((examDate.getTime() - today.getTime()) / 86_400_000);
-    return { id: t.id, title: t.title, date: t.scheduled_date, daysUntil };
+    return { ...item, daysUntil };
   });
 }

@@ -1266,22 +1266,12 @@ h2.section-title {
   padding: 22px;
   box-shadow: var(--shadow);
 }
-.card-dark {
-  background: var(--coal);
-  color: var(--white);
-  border-radius: var(--radius-lg);
-  padding: 22px;
-  box-shadow: var(--shadow);
-}
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
-}
-.card-dark .eyebrow {
-  color: rgba(255, 255, 255, 0.5);
 }
 .stat-num {
   font-family: var(--font-mono);
@@ -1296,8 +1286,10 @@ h2.section-title {
   margin-top: 2px;
   font-weight: 700;
 }
-.card-dark .stat-label {
-  color: rgba(255, 255, 255, 0.6);
+.muted-note {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 .hero-greet {
   grid-column: 1/-1;
@@ -1312,15 +1304,6 @@ h2.section-title {
   flex-wrap: wrap;
   gap: 20px;
 }
-.hero-greet .script {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 500;
-  font-size: 20px;
-  color: var(--pink);
-  display: block;
-  margin-bottom: 2px;
-}
 .hero-greet h2 {
   font-family: var(--font-display);
   font-weight: 600;
@@ -1330,81 +1313,6 @@ h2.section-title {
   font-size: 13.5px;
   color: rgba(255, 255, 255, 0.75);
   margin-top: 4px;
-}
-.today-pill {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-md);
-  padding: 14px 18px;
-  min-width: 220px;
-}
-.today-pill .tp-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--pink);
-  font-weight: 800;
-  font-family: var(--font-mono);
-}
-.today-pill .tp-task {
-  font-weight: 800;
-  margin-top: 6px;
-  font-size: 14.5px;
-}
-.today-pill .tp-sub {
-  font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.7);
-  margin-top: 2px;
-}
-.insight-card {
-  background: var(--pink-soft);
-  border: 1px solid #f5c7da;
-  border-radius: var(--radius-lg);
-  padding: 18px 20px;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  margin-bottom: 20px;
-}
-.insight-card .ic-emoji {
-  font-size: 22px;
-}
-.insight-card b {
-  display: block;
-  font-size: 14.5px;
-  margin-bottom: 2px;
-  color: var(--wine-deep);
-}
-.insight-card span {
-  font-size: 13.5px;
-  color: var(--text);
-}
-.task-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 13px 4px;
-  border-bottom: 1px solid var(--line);
-}
-.task-row:last-child {
-  border-bottom: none;
-}
-.task-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.task-dot.revisao {
-  background: var(--green);
-}
-.task-dot.prova {
-  background: var(--wine);
-}
-.task-dot.contato {
-  background: var(--pink);
-}
-.task-dot.ritual {
-  background: var(--wine-deep);
 }
 .task-check {
   width: 20px;
@@ -1423,96 +1331,9 @@ h2.section-title {
   color: #fff;
   transition: all 0.15s ease;
 }
-.task-check.revisao {
-  border-color: var(--green);
-}
-.task-check.prova {
-  border-color: var(--wine);
-}
-.task-check.contato {
-  border-color: var(--pink);
-}
-.task-check.ritual {
-  border-color: var(--wine-deep);
-}
 .task-check.done {
   background: var(--green);
   border-color: var(--green);
-}
-.task-row .t-info b {
-  font-size: 14px;
-  display: block;
-}
-.task-row .t-info span {
-  font-size: 12.5px;
-  color: var(--text-muted);
-}
-.task-row .t-time {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  color: var(--text-muted);
-}
-.streak-card {
-  text-align: center;
-}
-.streak-card .flame {
-  font-size: 34px;
-}
-.streak-card .num {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 30px;
-  color: var(--pink);
-  margin-top: 4px;
-}
-.week-dots {
-  display: flex;
-  justify-content: center;
-  gap: 7px;
-  margin-top: 14px;
-}
-.week-dots span {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
-  font-family: var(--font-mono);
-}
-.week-dots span.done {
-  background: var(--pink);
-  color: var(--wine-deep);
-  font-weight: 700;
-}
-.streak-next-exam {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-}
-.streak-next-exam span {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.5);
-  font-weight: 700;
-  display: block;
-  margin-bottom: 4px;
-}
-.streak-next-exam b {
-  font-family: var(--font-mono);
-  color: var(--pink);
-  font-size: 16px;
-  display: block;
-}
-.streak-next-exam em {
-  font-style: normal;
-  font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.7);
 }
 
 /* ---------- próximas provas (Home) ---------- */
@@ -1570,6 +1391,228 @@ h2.section-title {
 .exam-row .ex-badge.today {
   background: var(--green);
 }
+.exam-row-btn {
+  width: 100%;
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* ---------- Dashboard: cabeçalho ---------- */
+.btn-quick {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.btn-quick:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* ---------- Dashboard: checklists (hoje / semana) ---------- */
+.checklist-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.checklist-progress-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.checklist-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ice-dim);
+  margin: 10px 0 16px;
+  overflow: hidden;
+}
+.checklist-progress-bar > div {
+  height: 100%;
+  background: var(--green);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+.checklist-list {
+  display: flex;
+  flex-direction: column;
+}
+.checklist-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--line);
+}
+.checklist-list .checklist-row:last-child {
+  border-bottom: none;
+}
+.checklist-row.cancelled {
+  opacity: 0.55;
+}
+.checklist-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: transparent;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  transition: all 0.15s ease;
+}
+.checklist-check:disabled {
+  cursor: default;
+}
+.checklist-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin: 0 5px;
+}
+.checklist-body {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.checklist-body b {
+  font-size: 14px;
+  display: block;
+}
+.checklist-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.checklist-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.checklist-toolbar input[type="search"] {
+  flex: 1;
+  min-width: 180px;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  font-size: 13.5px;
+  background: var(--white);
+}
+.checklist-toolbar select {
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  font-size: 13.5px;
+  background: var(--white);
+}
+.week-checklist-days {
+  display: flex;
+  flex-direction: column;
+}
+.week-checklist-day {
+  border-bottom: 1px solid var(--line);
+  padding: 4px 0;
+}
+.week-checklist-day:last-child {
+  border-bottom: none;
+}
+.week-checklist-day.today .wcd-label {
+  color: var(--wine);
+}
+.week-checklist-day-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+.wcd-label {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.wcd-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.wcd-caret {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* ---------- Dashboard: revisão de flashcards em destaque ---------- */
+.review-highlight-counts {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.review-highlight-counts > div {
+  flex: 1;
+  background: var(--ice);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: center;
+}
+.review-highlight-counts b {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--wine);
+}
+.review-highlight-counts span {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.review-highlight-priority {
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* ---------- Dashboard: planejamento do mês ---------- */
+.month-plan-mission {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 15.5px;
+  color: var(--wine-deep);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
 .cal-toolbar {
   display: flex;
   align-items: center;

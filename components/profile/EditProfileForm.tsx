@@ -4,9 +4,15 @@ import { useActionState, useState } from "react";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { updateProfileAction, type ActionState } from "@/lib/actions/profile";
 import { AREA_OPTIONS, type Area } from "@/lib/constants/title-map";
-import type { ProfileForEdit } from "@/lib/queries/profile";
+import type { GenderTreatment, ProfileForEdit } from "@/lib/queries/profile";
 
 const initialState: ActionState = { error: null };
+
+const GENDER_OPTIONS: { value: GenderTreatment; label: string }[] = [
+  { value: "a", label: "Feminino (bem-vinda)" },
+  { value: "o", label: "Masculino (bem-vindo)" },
+  { value: "x", label: "Neutro" },
+];
 
 export function EditProfileForm({ profile }: { profile: ProfileForEdit }) {
   const [state, formAction] = useActionState(updateProfileAction, initialState);
@@ -14,6 +20,7 @@ export function EditProfileForm({ profile }: { profile: ProfileForEdit }) {
   const [area, setArea] = useState<Area>(profile.area);
   const [photoPreview, setPhotoPreview] = useState<string | null>(profile.photoUrl);
   const [dailyGoalMinutes, setDailyGoalMinutes] = useState(profile.dailyGoalMinutes);
+  const [genderTreatment, setGenderTreatment] = useState<GenderTreatment | "">(profile.genderTreatment ?? "");
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -67,6 +74,23 @@ export function EditProfileForm({ profile }: { profile: ProfileForEdit }) {
           <label htmlFor="area">Área de atuação</label>
           <select id="area" name="area" value={area} onChange={(e) => setArea(e.target.value as Area)}>
             {AREA_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="genderTreatment">Como prefere ser chamada(o)?</label>
+          <select
+            id="genderTreatment"
+            name="genderTreatment"
+            value={genderTreatment}
+            onChange={(e) => setGenderTreatment(e.target.value as GenderTreatment)}
+          >
+            <option value="">Prefiro não dizer</option>
+            {GENDER_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>

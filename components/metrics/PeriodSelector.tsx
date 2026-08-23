@@ -4,16 +4,15 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PERIOD_LABEL, FIRST_YEAR, type MetricsPeriod } from "@/lib/metrics/calc";
 
-const PERIOD_KEY = "rocket-metrics-period";
-const PERIODS: MetricsPeriod[] = ["week", "month", "year", "all"];
+const DEFAULT_PERIODS: MetricsPeriod[] = ["week", "month", "year", "all"];
 
-function withParams(searchParams: URLSearchParams, overrides: Record<string, string | null>): string {
+function withParams(basePath: string, searchParams: URLSearchParams, overrides: Record<string, string | null>): string {
   const params = new URLSearchParams(searchParams.toString());
   for (const [key, value] of Object.entries(overrides)) {
     if (value === null) params.delete(key);
     else params.set(key, value);
   }
-  return `/metrics?${params.toString()}`;
+  return `${basePath}?${params.toString()}`;
 }
 
 export function PeriodSelector({
@@ -23,6 +22,8 @@ export function PeriodSelector({
   month,
   weekDateKey,
   rangeLabel,
+  basePath = "/metrics",
+  periods = DEFAULT_PERIODS,
 }: {
   period: MetricsPeriod;
   hasExplicitPeriod: boolean;
@@ -30,22 +31,25 @@ export function PeriodSelector({
   month: number;
   weekDateKey: string;
   rangeLabel: string;
+  basePath?: string;
+  periods?: MetricsPeriod[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const storageKey = `rocket-period-${basePath.replace(/\//g, "") || "metrics"}`;
 
   useEffect(() => {
     if (hasExplicitPeriod) return;
-    const saved = localStorage.getItem(PERIOD_KEY);
-    if (saved && saved !== period && PERIODS.includes(saved as MetricsPeriod)) {
-      router.replace(withParams(searchParams, { period: saved, date: null, year: null, month: null }));
+    const saved = localStorage.getItem(storageKey);
+    if (saved && saved !== period && periods.includes(saved as MetricsPeriod)) {
+      router.replace(withParams(basePath, searchParams, { period: saved, date: null, year: null, month: null }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function selectPeriod(next: MetricsPeriod) {
-    localStorage.setItem(PERIOD_KEY, next);
-    router.push(withParams(searchParams, { period: next, date: null, year: null, month: null }));
+    localStorage.setItem(storageKey, next);
+    router.push(withParams(basePath, searchParams, { period: next, date: null, year: null, month: null }));
   }
 
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -56,20 +60,20 @@ export function PeriodSelector({
     if (period === "week") {
       const d = new Date(`${weekDateKey}T00:00:00`);
       d.setDate(d.getDate() + direction * 7);
-      return withParams(searchParams, { date: d.toISOString().slice(0, 10) });
+      return withParams(basePath, searchParams, { date: d.toISOString().slice(0, 10) });
     }
     if (period === "month") {
       let m = month + direction;
       let y = year;
       if (m < 1) { m = 12; y -= 1; }
       if (m > 12) { m = 1; y += 1; }
-      return withParams(searchParams, { year: String(y), month: String(m) });
+      return withParams(basePath, searchParams, { year: String(y), month: String(m) });
     }
     if (period === "year") {
       const y = year + direction;
-      return withParams(searchParams, { year: String(Math.max(FIRST_YEAR, y)) });
+      return withParams(basePath, searchParams, { year: String(Math.max(FIRST_YEAR, y)) });
     }
-    return "/metrics";
+    return basePath;
   }
 
   const yearOptions = Array.from({ length: Math.max(1, currentYear - FIRST_YEAR + 1) }, (_, i) => FIRST_YEAR + i);
@@ -77,7 +81,7 @@ export function PeriodSelector({
   return (
     <div className="metrics-period">
       <div className="metric-tabs">
-        {PERIODS.map((p) => (
+        {periods.map((p) => (
           <button key={p} type="button" className={period === p ? "active" : ""} onClick={() => selectPeriod(p)}>
             {PERIOD_LABEL[p]}
           </button>
@@ -103,7 +107,7 @@ export function PeriodSelector({
             <select
               aria-label="Selecionar ano"
               value={year}
-              onChange={(e) => router.push(withParams(searchParams, { year: e.target.value }))}
+              onChange={(e) => router.push(withParams(basePath, searchParams, { year: e.target.value }))}
               className="mp-year-select"
             >
               {yearOptions.map((y) => (
@@ -119,8 +123,8 @@ export function PeriodSelector({
               onClick={() =>
                 router.push(
                   period === "week"
-                    ? withParams(searchParams, { date: todayKey })
-                    : withParams(searchParams, { year: String(currentYear), month: String(currentMonth) }),
+                    ? withParams(basePath, searchParams, { date: todayKey })
+                    : withParams(basePath, searchParams, { year: String(currentYear), month: String(currentMonth) }),
                 )
               }
             >

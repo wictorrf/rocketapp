@@ -35,7 +35,7 @@ function mondayOf(date: Date): Date {
   return d;
 }
 
-const MONTH_NAMES_PT = [
+export const MONTH_NAMES_PT = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];

@@ -6,6 +6,7 @@ import { KebabMenu, type KebabAction } from "@/components/ui/KebabMenu";
 import { DeleteEventDialog } from "./DeleteEventDialog";
 import { QuestionResultForm } from "./QuestionResultForm";
 import { duplicateCalendarEventAction, setEventStatusAction } from "@/lib/actions/calendar";
+import { startReviewSessionAction } from "@/lib/actions/review";
 import type { CalendarItem } from "@/lib/queries/calendar";
 
 export function EventActionsMenu({
@@ -27,7 +28,15 @@ export function EventActionsMenu({
       { label: "Ver assunto", onClick: () => router.push(`/subjects/${event.subjectId}/topics/${event.topicId}`) },
       {
         label: "Começar revisão",
-        onClick: () => router.push(`/subjects/${event.subjectId}/topics/${event.topicId}/review`),
+        // A página /review exige uma review_sessions criada antes (senão
+        // redireciona de volta pro assunto) — precisa chamar a action, não
+        // dá pra só navegar direto pra URL.
+        onClick: () => {
+          const formData = new FormData();
+          formData.set("subjectId", event.subjectId ?? "");
+          formData.set("topicId", event.topicId ?? "");
+          startReviewSessionAction(formData);
+        },
       },
     ];
     return <KebabMenu actions={fsrsActions} />;
@@ -64,6 +73,14 @@ export function EventActionsMenu({
       label: "Cancelar evento",
       onClick: async () => {
         await setEventStatusAction(event.id, "cancelled");
+        router.refresh();
+      },
+    });
+  } else {
+    actions.push({
+      label: "Reabrir evento",
+      onClick: async () => {
+        await setEventStatusAction(event.id, "pending");
         router.refresh();
       },
     });

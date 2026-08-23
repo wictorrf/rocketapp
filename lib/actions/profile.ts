@@ -117,6 +117,8 @@ export async function updateProfileAction(
   const dailyGoalMinutes = Number.isFinite(dailyGoalMinutesRaw)
     ? Math.min(960, Math.max(15, Math.round(dailyGoalMinutesRaw)))
     : 120;
+  const genderTreatmentRaw = String(formData.get("genderTreatment") ?? "");
+  const genderTreatment = ["a", "o", "x"].includes(genderTreatmentRaw) ? genderTreatmentRaw : null;
 
   if (!fullName || !area) {
     return { error: "Preencha todos os campos." };
@@ -141,6 +143,7 @@ export async function updateProfileAction(
       full_name: fullName,
       area,
       daily_goal_minutes: dailyGoalMinutes,
+      gender_treatment: genderTreatment,
       ...(photoPath ? { photo_url: photoPath } : {}),
     })
     .eq("id", user.id);

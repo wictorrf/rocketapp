@@ -605,3 +605,86 @@ export async function getFocusSuggestions(
 export const QUESTION_LOG_TYPE_OPTIONS: { value: QuestionLogType; label: string }[] = Object.entries(
   QUESTION_LOG_TYPE_LABEL,
 ).map(([value, label]) => ({ value: value as QuestionLogType, label }));
+
+// ---------- Indicadores extras do Dashboard (atividades concluídas, dias/meses ativos) ----------
+
+async function countCompletedActivities(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  startKey: string | null,
+  endKey: string | null,
+): Promise<number> {
+  let taskQuery = supabase.from("calendar_tasks").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "done");
+  if (startKey) taskQuery = taskQuery.gte("scheduled_date", startKey);
+  if (endKey) taskQuery = taskQuery.lte("scheduled_date", endKey);
+
+  // Só ações do planejamento SEM vínculo com um evento — as vinculadas já
+  // são contadas via calendar_tasks acima, e contar as duas somaria a
+  // mesma atividade duas vezes.
+  let planQuery = supabase
+    .from("monthly_plan_actions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("status", "done")
+    .is("calendar_task_id", null);
+  if (startKey) planQuery = planQuery.gte("scheduled_date", startKey);
+  if (endKey) planQuery = planQuery.lte("scheduled_date", endKey);
+
+  const [{ count: taskCount }, { count: planCount }] = await Promise.all([taskQuery, planQuery]);
+  return (taskCount ?? 0) + (planCount ?? 0);
+}
+
+export async function getActivityCompletionMetrics(
+  userId: string,
+  range: PeriodRange,
+): Promise<{ count: number; comparison: Comparison }> {
+  const supabase = await createClient();
+  // range.end é exclusivo (igual range.previous.end) — subtrai 1ms antes de
+  // extrair a chave de dia local pra virar um limite ".lte" inclusivo
+  // correto, sem incluir um dia a mais.
+  const startKey = range.start ? toLocalDateKey(range.start) : null;
+  const endKey = range.start ? toLocalDateKey(new Date(range.end.getTime() - 1)) : null;
+
+  const [current, previous] = await Promise.all([
+    countCompletedActivities(supabase, userId, startKey, endKey),
+    range.previous
+      ? countCompletedActivities(
+          supabase,
+          userId,
+          range.previous.start ? toLocalDateKey(range.previous.start) : null,
+          range.previous.end ? toLocalDateKey(new Date(range.previous.end.getTime() - 1)) : null,
+        )
+      : null,
+  ]);
+
+  return { count: current, comparison: previous !== null ? compareToPrevious(current, previous) : null };
+}
+
+// Só faz sentido pra visualização Anual: quantos dias/meses distintos do ano
+// tiveram alguma atividade real (Study Time, revisão, questão ou evento
+// concluído) — usado pelos indicadores extras desse período.
+export async function getActiveDaysAndMonths(userId: string, range: PeriodRange): Promise<{ activeDays: number; activeMonths: number }> {
+  if (!range.start) return { activeDays: 0, activeMonths: 0 };
+  const supabase = await createClient();
+  const startIso = range.start.toISOString();
+  const endIso = range.end.toISOString();
+
+  const [{ data: sessions }, { data: reviews }, { data: questions }] = await Promise.all([
+    supabase.from("focus_sessions").select("started_at").eq("user_id", userId).not("ended_at", "is", null).gte("started_at", startIso).lt("started_at", endIso),
+    supabase.from("review_logs").select("reviewed_at").eq("user_id", userId).gte("reviewed_at", startIso).lt("reviewed_at", endIso),
+    supabase.from("question_logs").select("logged_at").eq("user_id", userId).gte("logged_at", startIso).lt("logged_at", endIso),
+  ]);
+
+  const days = new Set<string>();
+  const months = new Set<string>();
+  for (const iso of [
+    ...(sessions ?? []).map((r) => r.started_at),
+    ...(reviews ?? []).map((r) => r.reviewed_at),
+    ...(questions ?? []).map((r) => r.logged_at),
+  ]) {
+    const d = new Date(iso);
+    days.add(toLocalDateKey(d));
+    months.add(`${d.getFullYear()}-${d.getMonth()}`);
+  }
+  return { activeDays: days.size, activeMonths: months.size };
+}
