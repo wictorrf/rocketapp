@@ -54,6 +54,32 @@ export async function checkPossibleDuplicate(
   return match ? { id: match.id, frontPreview: htmlToPlainText(match.front) } : null;
 }
 
+function normalize(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
+// Busca por conteúdo (pergunta, resposta, etiquetas) — usada pela página
+// geral de Flashcards, que não carrega o conteúdo de todos os cartões de
+// uma vez (só disciplina/assunto). Devolve os assuntos que têm pelo menos
+// um cartão correspondente, pra filtrar a lista já carregada de assuntos.
+export async function searchFlashcardsByContent(userId: string, query: string): Promise<string[]> {
+  const needle = normalize(query.trim());
+  if (!needle) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase.from("flashcards").select("topic_id, front, back, tags").eq("user_id", userId);
+
+  const topicIds = new Set<string>();
+  for (const f of data ?? []) {
+    const haystack = [htmlToPlainText(f.front), htmlToPlainText(f.back), ...((f.tags as string[] | null) ?? [])];
+    if (haystack.some((v) => normalize(v).includes(needle))) topicIds.add(f.topic_id);
+  }
+  return [...topicIds];
+}
+
 export type MoveTargetTopic = { id: string; label: string };
 
 // Lista achatada "Disciplina — Assunto" pra mover um flashcard direto pro

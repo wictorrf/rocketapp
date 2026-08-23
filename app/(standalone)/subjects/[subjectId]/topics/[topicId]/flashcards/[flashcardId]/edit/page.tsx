@@ -3,7 +3,8 @@ import { getCurrentUserProfile } from "@/lib/queries/profile";
 import { getTopic } from "@/lib/queries/topics";
 import { getFlashcardForEdit } from "@/lib/queries/flashcards";
 import { getSignedUrl } from "@/lib/queries/storage";
-import { FlashcardForm } from "@/components/subjects/FlashcardForm";
+import { listActiveSubjectsWithTopics } from "@/lib/queries/subjects";
+import { FlashcardFormStandalone } from "@/components/subjects/FlashcardFormStandalone";
 
 export default async function EditFlashcardPage({
   params,
@@ -18,24 +19,17 @@ export default async function EditFlashcardPage({
   const flashcard = await getFlashcardForEdit(flashcardId);
   if (!flashcard || flashcard.topicId !== topicId) notFound();
 
-  const [imageUrl, backImageUrl] = await Promise.all([
+  const [imageUrl, backImageUrl, subjects] = await Promise.all([
     getSignedUrl("flashcard-images", flashcard.imageUrl),
     getSignedUrl("flashcard-images", flashcard.backImageUrl),
+    listActiveSubjectsWithTopics(profile.userId),
   ]);
 
   return (
-    <FlashcardForm
-      subjectId={subjectId}
-      topicId={topicId}
-      topicName={topic.name}
-      flashcard={{
-        id: flashcard.id,
-        front: flashcard.front,
-        back: flashcard.back,
-        tags: flashcard.tags,
-        imageUrl,
-        backImageUrl,
-      }}
+    <FlashcardFormStandalone
+      backHref={`/subjects/${subjectId}/topics/${topicId}`}
+      subjects={subjects}
+      flashcard={{ ...flashcard, imageUrl, backImageUrl }}
     />
   );
 }

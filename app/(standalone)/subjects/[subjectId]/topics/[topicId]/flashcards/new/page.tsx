@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/queries/profile";
 import { getTopic } from "@/lib/queries/topics";
-import { FlashcardForm } from "@/components/subjects/FlashcardForm";
+import { listActiveSubjectsWithTopics } from "@/lib/queries/subjects";
+import { FlashcardFormStandalone } from "@/components/subjects/FlashcardFormStandalone";
 
 export default async function NewFlashcardPage({
   params,
@@ -13,5 +14,14 @@ export default async function NewFlashcardPage({
   const topic = await getTopic(topicId);
   if (!topic) notFound();
 
-  return <FlashcardForm subjectId={subjectId} topicId={topicId} topicName={topic.name} />;
+  const subjects = await listActiveSubjectsWithTopics(profile.userId);
+
+  return (
+    <FlashcardFormStandalone
+      backHref={`/subjects/${subjectId}/topics/${topicId}`}
+      subjects={subjects}
+      defaultSubjectId={subjectId}
+      defaultTopicId={topicId}
+    />
+  );
 }

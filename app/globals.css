@@ -3292,6 +3292,80 @@ h2.section-title {
   color: var(--text-muted);
 }
 
+/* ---------- página geral de Flashcards ---------- */
+.fc-hub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.fc-hub-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--white);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+.fc-hub-card-link {
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+}
+.fc-hub-card-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fc-hub-card-top b {
+  font-size: 14.5px;
+}
+.fc-hub-card-top span {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.fc-hub-card-counts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.fc-hub-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--ice);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.fc-hub-count.overdue {
+  background: #fbe3ec;
+  color: var(--wine);
+}
+.fc-hub-count.new {
+  background: #e3f0ea;
+  color: var(--green);
+}
+.fc-hub-count.em-dia {
+  background: #e3f0ea;
+  color: var(--green);
+}
+.fc-hub-count.muted {
+  background: transparent;
+  padding-left: 0;
+}
+.fc-hub-card-reinforce {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--red-soft);
+}
+
 /* ---------- questões e simulados ---------- */
 .qz-summary {
   display: flex;
@@ -3324,34 +3398,6 @@ h2.section-title {
 }
 
 /* ---------- flashcard creation form ---------- */
-.fc-form-wrap {
-  min-height: 100vh;
-  background: var(--ice);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-}
-.fc-form-box {
-  width: 100%;
-  max-width: 520px;
-  background: var(--white);
-  border-radius: var(--radius-lg);
-  padding: 36px 40px;
-  box-shadow: var(--shadow-lift);
-}
-.fc-form-top {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 26px;
-}
-.fc-form-top h2 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 21px;
-  margin-top: 2px;
-}
 .fc-image-upload {
   border: 1.5px dashed var(--line);
   border-radius: var(--radius-md);

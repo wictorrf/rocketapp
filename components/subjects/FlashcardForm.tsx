@@ -1,40 +1,58 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { createFlashcardAction, updateFlashcardAction, type FlashcardActionState } from "@/lib/actions/flashcards";
+import type { FlashcardForEdit } from "@/lib/queries/flashcards";
+import type { SubjectWithTopicsOption } from "@/lib/queries/subjects";
 
 const initialState: FlashcardActionState = { error: null };
 
-export type FlashcardEditData = {
-  id: string;
-  front: string;
-  back: string;
-  tags: string[];
-  imageUrl: string | null;
-  backImageUrl: string | null;
-};
-
 export function FlashcardForm({
-  subjectId,
-  topicId,
-  topicName,
+  open,
+  onClose,
+  subjects,
+  defaultSubjectId,
+  defaultTopicId,
   flashcard,
 }: {
-  subjectId: string;
-  topicId: string;
-  topicName: string;
-  flashcard?: FlashcardEditData;
+  open: boolean;
+  onClose: () => void;
+  subjects: SubjectWithTopicsOption[];
+  defaultSubjectId?: string;
+  defaultTopicId?: string;
+  flashcard?: FlashcardForEdit;
 }) {
   const isEdit = Boolean(flashcard);
-  const [state, formAction] = useActionState(isEdit ? updateFlashcardAction : createFlashcardAction, initialState);
+  const router = useRouter();
+  const [state, formAction, isPending] = useActionState(isEdit ? updateFlashcardAction : createFlashcardAction, initialState);
+  const hasSubmitted = useRef(false);
+
+  // Sucesso de verdade: já foi submetido, terminou de processar, sem erro e
+  // sem aviso de duplicidade pendente (que também chega como error: null,
+  // mas ainda precisa de uma decisão da pessoa antes de salvar).
+  useEffect(() => {
+    if (hasSubmitted.current && !isPending && state.error === null && !state.duplicate) {
+      hasSubmitted.current = false;
+      router.refresh();
+      onClose();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, isPending]);
+
+  const [subjectId, setSubjectId] = useState(flashcard?.subjectId ?? defaultSubjectId ?? "");
+  const [topicId, setTopicId] = useState(flashcard?.topicId ?? defaultTopicId ?? "");
   const [imagePreview, setImagePreview] = useState<string | null>(flashcard?.imageUrl ?? null);
   const [removeImage, setRemoveImage] = useState(false);
   const [backImagePreview, setBackImagePreview] = useState<string | null>(flashcard?.backImageUrl ?? null);
   const [removeBackImage, setRemoveBackImage] = useState(false);
   const [confirmDuplicate, setConfirmDuplicate] = useState(false);
+
+  const topics = useMemo(() => subjects.find((s) => s.id === subjectId)?.topics ?? [], [subjects, subjectId]);
+  const topicName = topics.find((t) => t.id === topicId)?.name ?? "";
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>, side: "front" | "back") {
     const file = e.target.files?.[0];
@@ -53,17 +71,16 @@ export function FlashcardForm({
     reader.readAsDataURL(file);
   }
 
+  if (!open) return null;
+
   return (
-    <div className="fc-form-wrap">
-      <div className="fc-form-box">
-        <div className="fc-form-top">
-          <Link href={`/subjects/${subjectId}/topics/${topicId}`} className="icon-btn" aria-label="Voltar">
-            ‹
-          </Link>
-          <div>
-            <div className="step">{isEdit ? "Editar flashcard" : "Novo flashcard"}</div>
-            <h2>{topicName}</h2>
-          </div>
+    <div className="side-panel-overlay" onClick={onClose}>
+      <div className="side-panel-box" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-top">
+          <h2>{isEdit ? "Editar flashcard" : "Novo flashcard"}{topicName ? ` · ${topicName}` : ""}</h2>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Fechar">
+            ✕
+          </button>
         </div>
 
         {state.duplicate && !confirmDuplicate && (
@@ -71,27 +88,71 @@ export function FlashcardForm({
             <p>
               Já existe um cartão parecido nesse assunto: <b>“{state.duplicate.frontPreview}”</b>
             </p>
-            <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-              <Link
-                href={`/subjects/${subjectId}/topics/${topicId}/flashcards/${state.duplicate.id}/edit`}
-                className="btn btn-ghost btn-sm"
-              >
+            <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+              <Link href={`/subjects/${subjectId}/topics/${topicId}/flashcards/${state.duplicate.id}/edit`} className="btn btn-ghost btn-sm">
                 Ver cartão existente
               </Link>
               <button type="button" className="btn btn-primary btn-sm" onClick={() => setConfirmDuplicate(true)}>
                 Continuar criação
               </button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
+                Cancelar
+              </button>
             </div>
           </div>
         )}
 
-        <form action={formAction}>
+        <form
+          action={(formData) => {
+            hasSubmitted.current = true;
+            formAction(formData);
+          }}
+        >
           {isEdit && <input type="hidden" name="flashcardId" value={flashcard!.id} />}
-          <input type="hidden" name="subjectId" value={subjectId} />
-          <input type="hidden" name="topicId" value={topicId} />
           {confirmDuplicate && <input type="hidden" name="confirmDuplicate" value="1" />}
           {removeImage && <input type="hidden" name="removeImage" value="1" />}
           {removeBackImage && <input type="hidden" name="removeBackImage" value="1" />}
+
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="fc-subject">Disciplina</label>
+              <select
+                id="fc-subject"
+                name="subjectId"
+                required
+                value={subjectId}
+                onChange={(e) => {
+                  setSubjectId(e.target.value);
+                  setTopicId("");
+                }}
+              >
+                <option value="">Selecione</option>
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="fc-topic">Assunto</label>
+              <select
+                id="fc-topic"
+                name="topicId"
+                required
+                value={topicId}
+                onChange={(e) => setTopicId(e.target.value)}
+                disabled={!subjectId}
+              >
+                <option value="">Selecione</option>
+                {topics.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
           <RichTextEditor
             name="front"

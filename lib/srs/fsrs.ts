@@ -193,3 +193,13 @@ export function needsReinforcement(stored: StoredSrsState, suspended: boolean, n
   if (stored.difficulty >= REINFORCE_MAX_DIFFICULTY) return true;
   return retrievability(stored, now) < REINFORCE_MIN_RETRIEVABILITY;
 }
+
+// "~3min por cartão, arredondado pro múltiplo de 5 mais próximo" — usada
+// tanto em componentes client (card de revisão em destaque do Dashboard, hub
+// de Flashcards) quanto em queries de servidor. Fica neste módulo puro (sem
+// import de lib/supabase/server) pra poder ser importada direto de "use
+// client" sem puxar next/headers no bundle do cliente.
+export function estimateReviewMinutes(cardCount: number): number {
+  if (cardCount <= 0) return 0;
+  return Math.max(1, Math.round((cardCount * 3) / 5) * 5) || cardCount * 3;
+}

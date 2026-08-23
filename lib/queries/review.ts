@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { State, previewGrades, type GradePreview, type StoredSrsState } from "@/lib/srs/fsrs";
+import { State, previewGrades, deriveStageLabel, needsReinforcement, retrievability, estimateReviewMinutes, type GradePreview, type StoredSrsState } from "@/lib/srs/fsrs";
 
 // Limite diário de cartões Novos incluídos numa fila — aproximação simples
 // (não rastreia "quantos novos já foram iniciados hoje" entre sessões
@@ -176,49 +176,140 @@ export async function getAllDueFlashcardsForUser(userId: string): Promise<Review
   return { cards: [...shuffle(reviewCards), ...shuffle(newCards)], composition };
 }
 
-export type DueTopicSummary = {
+export type TopicHubStatus =
+  | "revisar_hoje"
+  | "atrasado"
+  | "novo"
+  | "aprendendo"
+  | "revisao"
+  | "reaprendizagem"
+  | "suspenso"
+  | "precisa_reforco"
+  | "em_dia";
+
+export type TopicHubSummary = {
   subjectId: string;
   subjectName: string;
   topicId: string;
   topicName: string;
-  dueCount: number;
+  totalActive: number;
+  overdueCount: number;
+  dueTodayCount: number;
+  newCount: number;
+  learningCount: number;
+  reviewCount: number;
+  relearningCount: number;
+  suspendedCount: number;
+  needsReinforcementCount: number;
+  estimatedMinutes: number;
+  lastActivityAt: string | null;
+  /** menor recuperabilidade estimada entre os cartões pendentes (atrasados/hoje) — null quando não há pendentes */
+  worstRecuperability: number | null;
+  statuses: TopicHubStatus[];
 };
 
-// Resumo por assunto dos cartões vencidos — alimenta o hub de Flashcards
-// ("revisar cada tema separado").
-export async function getDueSummaryByTopic(userId: string): Promise<DueTopicSummary[]> {
+// Resumo por assunto pra página geral de Flashcards — parte de TODOS os
+// assuntos ativos com pelo menos um cartão (não só os com pendência), pra
+// quem está em dia continuar aparecendo com esse status em vez de sumir da
+// lista. Uma única leitura em lote de flashcards+estado (sem N+1 por assunto).
+export async function getFlashcardsHubSummary(userId: string): Promise<TopicHubSummary[]> {
   const supabase = await createClient();
-  const nowIso = new Date().toISOString();
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-  const { data } = await supabase
-    .from("flashcards")
-    .select("id, topic_id, flashcard_srs_state!inner(due_at, suspended_at)")
-    .eq("user_id", userId)
-    .is("flashcard_srs_state.suspended_at", null)
-    .lte("flashcard_srs_state.due_at", nowIso);
+  const [{ data: subjects }, { data: topics }, { data: flashcards }] = await Promise.all([
+    supabase.from("subjects").select("id, name").eq("user_id", userId).is("archived_at", null),
+    supabase.from("topics").select("id, name, subject_id").eq("user_id", userId).is("archived_at", null),
+    supabase.from("flashcards").select(`id, topic_id, flashcard_srs_state(${SRS_SELECT})`).eq("user_id", userId),
+  ]);
 
-  if (!data?.length) return [];
-
-  const countByTopic = new Map<string, number>();
-  for (const f of data) countByTopic.set(f.topic_id, (countByTopic.get(f.topic_id) ?? 0) + 1);
-
-  const topicIds = [...countByTopic.keys()];
-  const { data: topics } = await supabase
-    .from("topics")
-    .select("id, name, subject_id")
-    .in("id", topicIds);
-
-  const subjectIds = [...new Set((topics ?? []).map((t) => t.subject_id))];
-  const { data: subjects } = await supabase.from("subjects").select("id, name").in("id", subjectIds);
   const subjectNameById = new Map((subjects ?? []).map((s) => [s.id, s.name]));
+  const cardsByTopic = new Map<string, RawFlashcardRow[]>();
+  for (const f of (flashcards ?? []) as RawFlashcardRow[]) {
+    const list = cardsByTopic.get(f.topic_id);
+    if (list) list.push(f);
+    else cardsByTopic.set(f.topic_id, [f]);
+  }
 
-  return (topics ?? [])
-    .map((t) => ({
+  const summaries: TopicHubSummary[] = [];
+  for (const t of topics ?? []) {
+    const cards = cardsByTopic.get(t.id);
+    if (!cards || cards.length === 0) continue; // só assuntos "com cartões"
+
+    let totalActive = 0;
+    let overdueCount = 0;
+    let dueTodayCount = 0;
+    let newCount = 0;
+    let learningCount = 0;
+    let reviewCount = 0;
+    let relearningCount = 0;
+    let suspendedCount = 0;
+    let needsReinforcementCount = 0;
+    let lastActivityAt: string | null = null;
+    let worstRecuperability: number | null = null;
+
+    for (const f of cards) {
+      const srs = srsOf(f);
+      const suspended = Boolean(srs.suspended_at);
+      if (srs.last_review_at && (!lastActivityAt || srs.last_review_at > lastActivityAt)) {
+        lastActivityAt = srs.last_review_at;
+      }
+      if (suspended) {
+        suspendedCount += 1;
+        continue;
+      }
+      totalActive += 1;
+      const stored = toStoredState(srs);
+      const stage = deriveStageLabel(srs.state, false);
+      if (stage === "aprendendo") learningCount += 1;
+      else if (stage === "revisao") reviewCount += 1;
+      else if (stage === "reaprendizagem") relearningCount += 1;
+      if (needsReinforcement(stored, false, now)) needsReinforcementCount += 1;
+
+      const dueAt = new Date(srs.due_at);
+      if (srs.state === State.New) {
+        newCount += 1;
+      } else if (dueAt < startOfToday) {
+        overdueCount += 1;
+        worstRecuperability = Math.min(worstRecuperability ?? 1, retrievability(stored, now));
+      } else if (dueAt <= endOfToday) {
+        dueTodayCount += 1;
+        worstRecuperability = Math.min(worstRecuperability ?? 1, retrievability(stored, now));
+      }
+    }
+
+    const statuses = new Set<TopicHubStatus>();
+    if (overdueCount > 0) statuses.add("atrasado");
+    if (dueTodayCount > 0) statuses.add("revisar_hoje");
+    if (newCount > 0) statuses.add("novo");
+    if (learningCount > 0) statuses.add("aprendendo");
+    if (reviewCount > 0) statuses.add("revisao");
+    if (relearningCount > 0) statuses.add("reaprendizagem");
+    if (suspendedCount > 0) statuses.add("suspenso");
+    if (needsReinforcementCount > 0) statuses.add("precisa_reforco");
+    if (overdueCount === 0 && dueTodayCount === 0 && newCount === 0 && totalActive > 0) statuses.add("em_dia");
+
+    summaries.push({
       subjectId: t.subject_id,
       subjectName: subjectNameById.get(t.subject_id) ?? "",
       topicId: t.id,
       topicName: t.name,
-      dueCount: countByTopic.get(t.id) ?? 0,
-    }))
-    .sort((a, b) => b.dueCount - a.dueCount);
+      totalActive,
+      overdueCount,
+      dueTodayCount,
+      newCount,
+      learningCount,
+      reviewCount,
+      relearningCount,
+      suspendedCount,
+      needsReinforcementCount,
+      estimatedMinutes: estimateReviewMinutes(overdueCount + dueTodayCount + newCount),
+      lastActivityAt,
+      worstRecuperability,
+      statuses: [...statuses],
+    });
+  }
+
+  return summaries;
 }

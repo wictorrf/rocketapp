@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeFlashcardHtml, htmlToPlainText } from "@/lib/utils/sanitize-html";
-import { checkPossibleDuplicate, listActiveTopicsForFlashcardMove } from "@/lib/queries/flashcards";
+import { checkPossibleDuplicate, listActiveTopicsForFlashcardMove, searchFlashcardsByContent } from "@/lib/queries/flashcards";
 import { resetProgress } from "@/lib/srs/fsrs";
 
 export type ActionState = { error: string | null };
@@ -50,7 +50,7 @@ export async function createFlashcardAction(
   const confirmDuplicate = formData.get("confirmDuplicate") === "1";
 
   if (!subjectId || !topicId || !htmlToPlainText(front) || !htmlToPlainText(back)) {
-    return { error: "Preencha a frente e o verso do cartão." };
+    return { error: "Escolha disciplina e assunto, e preencha a frente e o verso do cartão." };
   }
 
   if (!confirmDuplicate) {
@@ -77,7 +77,8 @@ export async function createFlashcardAction(
   if (error) return { error: "Não foi possível salvar o flashcard. Tente novamente." };
 
   revalidatePath(`/subjects/${subjectId}/topics/${topicId}`);
-  redirect(`/subjects/${subjectId}/topics/${topicId}`);
+  revalidatePath("/flashcards");
+  return { error: null };
 }
 
 export async function updateFlashcardAction(
@@ -99,8 +100,23 @@ export async function updateFlashcardAction(
   const removeImage = formData.get("removeImage") === "1";
   const removeBackImage = formData.get("removeBackImage") === "1";
 
-  if (!flashcardId || !htmlToPlainText(front) || !htmlToPlainText(back)) {
-    return { error: "Preencha a frente e o verso do cartão." };
+  if (!flashcardId || !subjectId || !topicId || !htmlToPlainText(front) || !htmlToPlainText(back)) {
+    return { error: "Escolha disciplina e assunto, e preencha a frente e o verso do cartão." };
+  }
+
+  const { data: current } = await supabase
+    .from("flashcards")
+    .select("topic_id")
+    .eq("id", flashcardId)
+    .maybeSingle();
+  if (!current) return { error: "Flashcard não encontrado." };
+
+  // Disciplina/assunto agora são campos editáveis no mesmo formulário (não
+  // só a ação separada "Mover") — se o assunto de destino mudou, valida que
+  // ele não está arquivado, igual moveFlashcardAction já fazia.
+  if (topicId !== current.topic_id) {
+    const { data: target } = await supabase.from("topics").select("id, archived_at").eq("id", topicId).maybeSingle();
+    if (!target || target.archived_at) return { error: "O assunto de destino não está disponível." };
   }
 
   const [image, backImage] = await Promise.all([
@@ -110,20 +126,22 @@ export async function updateFlashcardAction(
   if (image.error) return { error: image.error };
   if (backImage.error) return { error: backImage.error };
 
-  const update: Record<string, unknown> = { front, back, tags };
+  const update: Record<string, unknown> = { front, back, tags, topic_id: topicId };
   if (image.path) update.image_url = image.path;
   else if (removeImage) update.image_url = null;
   if (backImage.path) update.back_image_url = backImage.path;
   else if (removeBackImage) update.back_image_url = null;
 
-  // Editar conteúdo, formatação ou imagens preserva o identificador, o
-  // histórico e o estado do FSRS — só "Reiniciar progresso" (ação separada
-  // e reforçada) reinicia o agendamento.
+  // Editar conteúdo, formatação, imagens ou até disciplina/assunto preserva
+  // o identificador, o histórico e o estado do FSRS — só "Reiniciar
+  // progresso" (ação separada e reforçada) reinicia o agendamento.
   const { error } = await supabase.from("flashcards").update(update).eq("id", flashcardId);
   if (error) return { error: "Não foi possível salvar o flashcard. Tente novamente." };
 
-  revalidatePath(`/subjects/${subjectId}/topics/${topicId}`);
-  redirect(`/subjects/${subjectId}/topics/${topicId}`);
+  revalidatePath(`/subjects/${subjectId}/topics/${current.topic_id}`);
+  if (topicId !== current.topic_id) revalidatePath(`/subjects/${subjectId}/topics/${topicId}`);
+  revalidatePath("/flashcards");
+  return { error: null };
 }
 
 export async function duplicateFlashcardAction(
@@ -158,6 +176,7 @@ export async function duplicateFlashcardAction(
   if (error) return { error: "Não foi possível duplicar o flashcard." };
 
   revalidatePath(`/subjects/${subjectId}/topics/${topicId}`);
+  revalidatePath("/flashcards");
   return { error: null };
 }
 
@@ -191,6 +210,7 @@ export async function moveFlashcardAction(
 
   revalidatePath(`/subjects/${subjectId}/topics/${topicId}`);
   revalidatePath(`/subjects/${subjectId}/topics/${targetTopicId}`);
+  revalidatePath("/flashcards");
   return { error: null };
 }
 
@@ -212,6 +232,7 @@ export async function suspendFlashcardAction(
   if (error) return { error: "Não foi possível suspender o flashcard." };
 
   revalidatePath(`/subjects/${subjectId}/topics/${topicId}`);
+  revalidatePath("/flashcards");
   return { error: null };
 }
 
@@ -233,6 +254,7 @@ export async function reactivateFlashcardAction(
   if (error) return { error: "Não foi possível reativar o flashcard." };
 
   revalidatePath(`/subjects/${subjectId}/topics/${topicId}`);
+  revalidatePath("/flashcards");
   return { error: null };
 }
 
@@ -272,6 +294,7 @@ export async function resetFlashcardProgressAction(
   if (error) return { error: "Não foi possível reiniciar o progresso desse flashcard." };
 
   revalidatePath(`/subjects/${subjectId}/topics/${topicId}`);
+  revalidatePath("/flashcards");
   return { error: null };
 }
 
@@ -299,5 +322,15 @@ export async function deleteFlashcardAction(
   if (error) return { error: "Não foi possível excluir o flashcard." };
 
   revalidatePath(`/subjects/${subjectId}/topics/${topicId}`);
+  revalidatePath("/flashcards");
   return { error: null };
+}
+
+export async function searchFlashcardsByContentAction(query: string): Promise<string[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  return searchFlashcardsByContent(user.id, query);
 }

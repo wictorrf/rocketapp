@@ -3,6 +3,7 @@ import { toLocalDateKey } from "@/lib/utils/format";
 import { isRemembered } from "@/lib/metrics/calc";
 import { getAgendaDay, getWeekCalendar, getMonthlyPlan, getMonthlyPlanActions, type CalendarItem } from "@/lib/queries/calendar";
 import { getAllDueFlashcardsForUser } from "@/lib/queries/review";
+import { estimateReviewMinutes } from "@/lib/srs/fsrs";
 import { WEEKDAY_LABEL_MON_FIRST_PT } from "@/lib/constants/calendar";
 
 export type PriorityTask = {
@@ -107,7 +108,7 @@ export async function getPriorityTask(userId: string): Promise<PriorityTask | nu
     topicName: topic.name,
     subjectName: subjectNameById.get(topic.subject_id) ?? "",
     cardCount: stat.count,
-    estimatedMinutes: Math.max(5, stat.count * 3),
+    estimatedMinutes: estimateReviewMinutes(stat.count),
   };
 }
 
@@ -130,7 +131,7 @@ export async function getFlashcardReviewHighlight(userId: string): Promise<Flash
     dueTodayCount: composition.dueToday,
     newCount: composition.newCards,
     totalCount,
-    estimatedMinutes: Math.max(1, Math.round((totalCount * 3) / 5) * 5) || totalCount * 3,
+    estimatedMinutes: estimateReviewMinutes(totalCount),
     priority,
   };
 }
