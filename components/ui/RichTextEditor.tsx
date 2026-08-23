@@ -29,6 +29,16 @@ export function RichTextEditor({
   const id = useId();
   const editorRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLInputElement>(null);
+  // Congela o HTML inicial na montagem — dangerouslySetInnerHTML (ao
+  // contrário do defaultValue de um <input> nativo) reaplica sempre que o
+  // valor muda entre renders. Como onChange devolve o HTML pro componente
+  // pai e volta aqui via prop `defaultValue`, usar sanitizeFlashcardHtml
+  // (defaultValue) direto no dangerouslySetInnerHTML reescrevia o innerHTML
+  // a cada tecla digitada — apagando os nós de texto e jogando o cursor de
+  // volta pro início do campo, o que fazia cada letra nova entrar antes da
+  // anterior (texto digitado "de trás pra frente"). Resetar o conteúdo
+  // continua funcionando do mesmo jeito de sempre: remontando via `key`.
+  const [initialHtml] = useState(() => sanitizeFlashcardHtml(defaultValue));
   const [isEmpty, setIsEmpty] = useState(!defaultValue.trim());
   const [textColorOpen, setTextColorOpen] = useState(false);
   const [highlightOpen, setHighlightOpen] = useState(false);
@@ -224,13 +234,13 @@ export function RichTextEditor({
         aria-label={label}
         data-placeholder={placeholder}
         data-empty={isEmpty}
-        dangerouslySetInnerHTML={{ __html: sanitizeFlashcardHtml(defaultValue) }}
+        dangerouslySetInnerHTML={{ __html: initialHtml }}
         onInput={syncHidden}
         onBlur={syncHidden}
         onKeyDown={handleKeyDown}
       />
 
-      <input ref={hiddenRef} type="hidden" name={name} defaultValue={sanitizeFlashcardHtml(defaultValue)} />
+      <input ref={hiddenRef} type="hidden" name={name} defaultValue={initialHtml} />
     </div>
   );
 }
