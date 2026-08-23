@@ -3,6 +3,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { applyGrade, deriveStageLabel, type Grade, type StageLabel, type StoredSrsState } from "@/lib/srs/fsrs";
+import { getFlashcardReviewHistory, type ReviewHistoryEntry } from "@/lib/queries/review";
+
+export async function getFlashcardReviewHistoryAction(flashcardId: string): Promise<ReviewHistoryEntry[]> {
+  return getFlashcardReviewHistory(flashcardId);
+}
 
 export async function startReviewSessionAction(formData: FormData) {
   const supabase = await createClient();
@@ -51,11 +56,22 @@ export type GradeFlashcardResult = {
   intervalLabel: string;
 };
 
-export async function gradeFlashcardAction(
-  flashcardId: string,
-  sessionId: string,
-  rating: Grade,
-): Promise<GradeFlashcardResult> {
+// Grava a nota via a função Postgres grade_flashcard (migração 0009): o
+// cálculo do FSRS continua aqui em TypeScript (mesma lib ts-fsrs de sempre),
+// mas a ESCRITA (update do estado + insert do histórico) roda numa
+// transação só, travando a linha do cartão — sem risco de update e insert
+// ficarem dessincronizados se um deles falhar. idempotencyKey garante que
+// reenviar a mesma tentativa (retry de rede, duplo clique) nunca aplica a
+// nota duas vezes.
+export async function gradeFlashcardAction(params: {
+  flashcardId: string;
+  sessionId: string;
+  rating: Grade;
+  idempotencyKey: string;
+  timezone: string;
+  responseDurationMs: number;
+}): Promise<GradeFlashcardResult> {
+  const { flashcardId, sessionId, rating, idempotencyKey, timezone, responseDurationMs } = params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -88,40 +104,36 @@ export async function gradeFlashcardAction(
   const now = new Date();
   const result = applyGrade(before, rating, now);
 
-  await supabase
-    .from("flashcard_srs_state")
-    .update({
-      state: result.after.state,
-      due_at: result.after.dueAt,
-      stability: result.after.stability,
-      difficulty: result.after.difficulty,
-      elapsed_days: result.after.elapsedDays,
-      scheduled_days: result.after.scheduledDays,
-      learning_steps: result.after.learningSteps,
-      reps: result.after.reps,
-      lapses: result.after.lapses,
-      last_review_at: now.toISOString(),
-      updated_at: now.toISOString(),
-    })
-    .eq("flashcard_id", flashcardId);
-
-  await supabase.from("review_logs").insert({
-    user_id: user.id,
-    flashcard_id: flashcardId,
-    session_id: sessionId,
-    rating,
-    state_before: before.state,
-    state_after: result.after.state,
-    due_before: before.dueAt,
-    due_after: result.after.dueAt,
-    stability_before: before.stability,
-    stability_after: result.after.stability,
-    difficulty_before: before.difficulty,
-    difficulty_after: result.after.difficulty,
-    scheduled_days: result.scheduledDays,
-    elapsed_days: result.after.elapsedDays,
-    reviewed_at: now.toISOString(),
+  const { data, error } = await supabase.rpc("grade_flashcard", {
+    p_flashcard_id: flashcardId,
+    p_session_id: sessionId,
+    p_idempotency_key: idempotencyKey,
+    p_expected_reps: before.reps,
+    p_rating: rating,
+    p_state_after: result.after.state,
+    p_due_after: result.after.dueAt,
+    p_stability_after: result.after.stability,
+    p_difficulty_after: result.after.difficulty,
+    p_elapsed_days_after: result.after.elapsedDays,
+    p_scheduled_days: result.scheduledDays,
+    p_learning_steps_after: result.after.learningSteps,
+    p_reps_after: result.after.reps,
+    p_lapses_after: result.after.lapses,
+    p_reviewed_at: now.toISOString(),
+    p_timezone: timezone,
+    p_response_duration_ms: responseDurationMs,
   });
+
+  if (error || !data?.[0]) {
+    return {
+      error:
+        error?.code === "40001"
+          ? "Esse cartão foi atualizado em outro lugar. Recarregue a página e tente de novo."
+          : "Não foi possível salvar sua resposta agora.",
+      stage: "novo",
+      intervalLabel: "",
+    };
+  }
 
   return {
     error: null,

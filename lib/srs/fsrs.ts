@@ -136,7 +136,7 @@ export function retentionPctAt(elapsedDays: number, stabilityDays: number): numb
   return forgetting_curve(params.w, elapsedDays, Math.max(stabilityDays, 0.01)) * 100;
 }
 
-function formatInterval(scheduledDays: number): string {
+export function formatInterval(scheduledDays: number): string {
   if (scheduledDays < 1) {
     const minutes = Math.max(1, Math.round(scheduledDays * 24 * 60));
     if (minutes < 60) return `${minutes} min`;
@@ -161,6 +161,13 @@ export function deriveStageLabel(state: State, suspended: boolean): StageLabel {
   if (state === State.Relearning) return "reaprendizagem";
   return "revisao";
 }
+
+export const RATING_LABEL_PT: Record<Grade, string> = {
+  [Rating.Again]: "Esqueci",
+  [Rating.Hard]: "Difícil",
+  [Rating.Good]: "Bom",
+  [Rating.Easy]: "Fácil",
+};
 
 export const STAGE_LABEL_PT: Record<StageLabel, string> = {
   novo: "Novo",

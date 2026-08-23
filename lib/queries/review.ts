@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { State, previewGrades, deriveStageLabel, needsReinforcement, retrievability, estimateReviewMinutes, type GradePreview, type StoredSrsState } from "@/lib/srs/fsrs";
+import { State, previewGrades, deriveStageLabel, needsReinforcement, retrievability, estimateReviewMinutes, formatInterval, type Grade, type GradePreview, type StoredSrsState } from "@/lib/srs/fsrs";
 
 // Limite diário de cartões Novos incluídos numa fila — aproximação simples
 // (não rastreia "quantos novos já foram iniciados hoje" entre sessões
@@ -16,6 +16,10 @@ export type ReviewCard = {
   topicName?: string;
   subjectName?: string;
   previews: GradePreview[];
+  stability: number;
+  difficulty: number;
+  reps: number;
+  lapses: number;
 };
 
 export type QueueComposition = { overdue: number; dueToday: number; newCards: number };
@@ -123,6 +127,10 @@ export async function getDueFlashcardsForReview(topicId: string): Promise<Review
       imageUrl: f.image_url,
       backImageUrl: f.back_image_url,
       previews: previewGrades(toStoredState(srsOf(f))),
+      stability: srsOf(f).stability,
+      difficulty: srsOf(f).difficulty,
+      reps: srsOf(f).reps,
+      lapses: srsOf(f).lapses,
     })),
     composition: summarizeQueue(queue, nowIso),
   };
@@ -164,6 +172,10 @@ export async function getAllDueFlashcardsForUser(userId: string): Promise<Review
       topicName: topic?.name,
       subjectName: topic ? subjectNameById.get(topic.subject_id) : undefined,
       previews: previewGrades(toStoredState(srsOf(f))),
+      stability: srsOf(f).stability,
+      difficulty: srsOf(f).difficulty,
+      reps: srsOf(f).reps,
+      lapses: srsOf(f).lapses,
     };
   });
 
@@ -312,4 +324,31 @@ export async function getFlashcardsHubSummary(userId: string): Promise<TopicHubS
   }
 
   return summaries;
+}
+
+export type ReviewHistoryEntry = {
+  rating: Grade;
+  reviewedAt: string;
+  intervalLabel: string;
+};
+
+const REVIEW_HISTORY_LIMIT = 10;
+
+// Histórico recente de um cartão específico, usado pelo "Ver detalhes" da
+// sessão de revisão — buscado sob demanda (só quando a pessoa abre o
+// painel), não junto da fila inteira.
+export async function getFlashcardReviewHistory(flashcardId: string): Promise<ReviewHistoryEntry[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("review_logs")
+    .select("rating, reviewed_at, scheduled_days")
+    .eq("flashcard_id", flashcardId)
+    .order("reviewed_at", { ascending: false })
+    .limit(REVIEW_HISTORY_LIMIT);
+
+  return (data ?? []).map((r) => ({
+    rating: r.rating as Grade,
+    reviewedAt: r.reviewed_at,
+    intervalLabel: formatInterval(r.scheduled_days),
+  }));
 }
