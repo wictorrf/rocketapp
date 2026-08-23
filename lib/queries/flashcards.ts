@@ -9,14 +9,16 @@ export type FlashcardForEdit = {
   back: string;
   tags: string[];
   imageUrl: string | null;
+  imageAlt: string | null;
   backImageUrl: string | null;
+  backImageAlt: string | null;
 };
 
 export async function getFlashcardForEdit(flashcardId: string): Promise<FlashcardForEdit | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("flashcards")
-    .select("id, topic_id, front, back, tags, image_url, back_image_url, topics(subject_id)")
+    .select("id, topic_id, front, back, tags, image_url, image_alt, back_image_url, back_image_alt, topics(subject_id)")
     .eq("id", flashcardId)
     .maybeSingle();
   if (!data) return null;
@@ -29,7 +31,9 @@ export async function getFlashcardForEdit(flashcardId: string): Promise<Flashcar
     back: data.back,
     tags: (data.tags as string[] | null) ?? [],
     imageUrl: data.image_url,
+    imageAlt: data.image_alt,
     backImageUrl: data.back_image_url,
+    backImageAlt: data.back_image_alt,
   };
 }
 

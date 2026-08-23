@@ -15,12 +15,16 @@ export function RichTextEditor({
   placeholder,
   required = false,
   defaultValue = "",
+  onChange,
 }: {
   name: string;
   label: string;
   placeholder?: string;
   required?: boolean;
   defaultValue?: string;
+  /** Reporta o HTML atual pro componente pai (ex: rascunho, pré-visualização)
+   * sem tornar o editor controlado — o pai nunca escreve de volta no DOM. */
+  onChange?: (html: string) => void;
 }) {
   const id = useId();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -35,6 +39,7 @@ export function RichTextEditor({
     if (!editor || !hidden) return;
     hidden.value = editor.innerHTML;
     setIsEmpty((editor.textContent ?? "").trim().length === 0);
+    onChange?.(editor.innerHTML);
   }
 
   // Fonte da verdade no momento do envio: o evento nativo `formdata` dispara

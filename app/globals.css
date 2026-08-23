@@ -2040,6 +2040,22 @@ h2.section-title {
   gap: 8px;
   margin-top: 8px;
 }
+.draft-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--lavender);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text);
+}
+.draft-banner span {
+  flex: 1;
+  min-width: 140px;
+}
 .cal-cell.ritual-day {
   background: var(--pink-soft);
 }
@@ -3398,6 +3414,13 @@ h2.section-title {
 }
 
 /* ---------- flashcard creation form ---------- */
+.fc-image-dropzone {
+  border-radius: var(--radius-md);
+  outline-offset: 2px;
+}
+.fc-image-dropzone:focus-visible {
+  outline: 2px solid var(--wine);
+}
 .fc-image-upload {
   border: 1.5px dashed var(--line);
   border-radius: var(--radius-md);
@@ -3405,6 +3428,15 @@ h2.section-title {
   text-align: center;
   cursor: pointer;
   background: var(--ice);
+}
+.fc-form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.fc-form-actions .btn {
+  flex: 1;
+  min-width: 160px;
 }
 .fc-image-upload img {
   max-width: 100%;
@@ -3673,6 +3705,41 @@ h2.section-title {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+.fc-preview-frame {
+  max-width: 560px;
+}
+.fc-preview-device-toggle {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.fc-preview-device-toggle button {
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.fc-preview-device-toggle button.active {
+  background: var(--wine);
+  border-color: var(--wine);
+  color: #fff;
+}
+.fc-preview-card-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+  perspective: 1400px;
+}
+.fc-preview-frame.mobile .flip-card {
+  max-width: 280px;
+  height: 340px;
 }
 .review-grading {
   text-align: center;

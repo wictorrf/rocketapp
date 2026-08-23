@@ -47,6 +47,8 @@ export async function createFlashcardAction(
   const front = sanitizeFlashcardHtml(String(formData.get("front") ?? ""));
   const back = sanitizeFlashcardHtml(String(formData.get("back") ?? ""));
   const tags = parseTags(formData.get("tags"));
+  const imageAlt = String(formData.get("imageAlt") ?? "").trim() || null;
+  const backImageAlt = String(formData.get("backImageAlt") ?? "").trim() || null;
   const confirmDuplicate = formData.get("confirmDuplicate") === "1";
 
   if (!subjectId || !topicId || !htmlToPlainText(front) || !htmlToPlainText(back)) {
@@ -72,7 +74,9 @@ export async function createFlashcardAction(
     back,
     tags,
     image_url: image.path ?? null,
+    image_alt: image.path ? imageAlt : null,
     back_image_url: backImage.path ?? null,
+    back_image_alt: backImage.path ? backImageAlt : null,
   });
   if (error) return { error: "Não foi possível salvar o flashcard. Tente novamente." };
 
@@ -97,6 +101,8 @@ export async function updateFlashcardAction(
   const front = sanitizeFlashcardHtml(String(formData.get("front") ?? ""));
   const back = sanitizeFlashcardHtml(String(formData.get("back") ?? ""));
   const tags = parseTags(formData.get("tags"));
+  const imageAlt = String(formData.get("imageAlt") ?? "").trim() || null;
+  const backImageAlt = String(formData.get("backImageAlt") ?? "").trim() || null;
   const removeImage = formData.get("removeImage") === "1";
   const removeBackImage = formData.get("removeBackImage") === "1";
 
@@ -127,10 +133,26 @@ export async function updateFlashcardAction(
   if (backImage.error) return { error: backImage.error };
 
   const update: Record<string, unknown> = { front, back, tags, topic_id: topicId };
-  if (image.path) update.image_url = image.path;
-  else if (removeImage) update.image_url = null;
-  if (backImage.path) update.back_image_url = backImage.path;
-  else if (removeBackImage) update.back_image_url = null;
+  if (image.path) {
+    update.image_url = image.path;
+    update.image_alt = imageAlt;
+  } else if (removeImage) {
+    update.image_url = null;
+    update.image_alt = null;
+  } else {
+    // Imagem não mudou nesta submissão, mas o texto alternativo pode ter
+    // sido editado independentemente dela.
+    update.image_alt = imageAlt;
+  }
+  if (backImage.path) {
+    update.back_image_url = backImage.path;
+    update.back_image_alt = backImageAlt;
+  } else if (removeBackImage) {
+    update.back_image_url = null;
+    update.back_image_alt = null;
+  } else {
+    update.back_image_alt = backImageAlt;
+  }
 
   // Editar conteúdo, formatação, imagens ou até disciplina/assunto preserva
   // o identificador, o histórico e o estado do FSRS — só "Reiniciar
@@ -157,7 +179,7 @@ export async function duplicateFlashcardAction(
 
   const { data: original } = await supabase
     .from("flashcards")
-    .select("front, back, tags, image_url, back_image_url, topic_id")
+    .select("front, back, tags, image_url, image_alt, back_image_url, back_image_alt, topic_id")
     .eq("id", flashcardId)
     .maybeSingle();
   if (!original) return { error: "Flashcard não encontrado." };
@@ -171,7 +193,9 @@ export async function duplicateFlashcardAction(
     back: original.back,
     tags: original.tags,
     image_url: original.image_url,
+    image_alt: original.image_alt,
     back_image_url: original.back_image_url,
+    back_image_alt: original.back_image_alt,
   });
   if (error) return { error: "Não foi possível duplicar o flashcard." };
 
