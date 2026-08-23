@@ -92,6 +92,7 @@ a {
   vertical-align: -0.12em;
 }
 .btn {
+  display: inline-block;
   font-family: var(--font-body);
   font-weight: 800;
   font-size: 14px;
