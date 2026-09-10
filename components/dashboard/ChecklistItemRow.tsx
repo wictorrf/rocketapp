@@ -49,7 +49,6 @@ export function ChecklistItemRow({ item, onEdit }: { item: ChecklistItem; onEdit
   }
 
   const planActions: KebabAction[] = [
-    { label: "Ver planejamento", onClick: () => router.push(`/calendar?year=${item.scheduledDate.slice(0, 4)}&month=${Number(item.scheduledDate.slice(5, 7))}&plan=1`) },
     {
       label: optimisticDone ? "Marcar como pendente" : "Marcar como concluído",
       onClick: toggle,

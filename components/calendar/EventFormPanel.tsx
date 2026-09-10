@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 import { EditScopeDialog } from "./EditScopeDialog";
+import { DeleteEventDialog } from "./DeleteEventDialog";
 import { createCalendarEventAction, updateCalendarEventAction, getSeriesOccurrenceCountsAction } from "@/lib/actions/calendar";
 import { TASK_TYPE_OPTIONS, REPEAT_OPTIONS, DEFAULT_COLOR_BY_TYPE, type CalendarTaskType } from "@/lib/constants/calendar";
 import { DEFAULT_ENTITY_COLOR } from "@/lib/constants/entity-colors";
@@ -65,6 +66,7 @@ export function EventFormPanel({
   const [error, setError] = useState<string | null>(null);
   const [showScopeDialog, setShowScopeDialog] = useState(false);
   const [scopeCounts, setScopeCounts] = useState<{ future: number; total: number } | null>(null);
+  const [showDelete, setShowDelete] = useState(false);
 
   const topics = useMemo(() => subjects.find((s) => s.id === subjectId)?.topics ?? [], [subjects, subjectId]);
 
@@ -383,9 +385,16 @@ export function EventFormPanel({
           )}
 
           {error && <p className="error-text">{error}</p>}
-          <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
-            {pending ? "Guardando..." : "Guardar evento"}
-          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
+              {pending ? "Guardando..." : mode === "edit" ? "Salvar alterações" : "Guardar evento"}
+            </button>
+            {mode === "edit" && (
+              <button type="button" className="btn btn-danger" disabled={pending} onClick={() => setShowDelete(true)}>
+                Excluir
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -398,6 +407,8 @@ export function EventFormPanel({
           pending={pending}
         />
       )}
+
+      {showDelete && event && <DeleteEventDialog event={event} onClose={onClose} />}
     </div>
   );
 }

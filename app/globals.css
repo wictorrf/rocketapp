@@ -38,12 +38,14 @@
   --font-script: var(--font-dancing-script), cursive;
 }
 
-/* Dashboard (documento de requisitos): fonte única mais arredondada/jovem
-   pra títulos, textos, números e botões — sobrescreve as 3 variáveis de
-   fonte só dentro do Dashboard, sem rebrandar o app inteiro. A hierarquia
-   de peso (regular/semibold/bold) já vem das classes existentes
-   (.eyebrow, .section-title, .stat-num etc), que a Nunito Sans cobre. */
-.dashboard-page {
+/* Dashboard e Calendário (documentos de requisitos): fonte única mais
+   arredondada/jovem pra títulos, textos, números e botões — sobrescreve as
+   3 variáveis de fonte só dentro dessas telas, sem rebrandar o app inteiro.
+   A hierarquia de peso (regular/semibold/bold) já vem das classes
+   existentes (.eyebrow, .section-title, .stat-num etc), que a Nunito Sans
+   cobre. */
+.dashboard-page,
+.calendar-page {
   --font-display: var(--font-nunito-sans), sans-serif;
   --font-body: var(--font-nunito-sans), sans-serif;
   --font-mono: var(--font-nunito-sans), sans-serif;
@@ -1707,13 +1709,20 @@ h2.section-title {
   flex-wrap: wrap;
   gap: 12px;
 }
+.cal-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .cal-nav {
   display: flex;
   align-items: center;
   gap: 16px;
 }
-.cal-nav button,
-.cal-nav a {
+/* Só as setas ‹ › — antes era ".cal-nav button, .cal-nav a" (qualquer
+   botão/link dentro de .cal-nav), o que espremia os botões do popover de
+   Filtros (agora aninhado aqui) em círculos de 34px sem o texto aparecer. */
+.cal-nav-arrow {
   background: var(--white);
   border: 1px solid var(--line);
   width: 34px;

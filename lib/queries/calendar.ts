@@ -8,12 +8,6 @@ function pad(n: number) {
 function firstOfMonthKey(year: number, month: number): string {
   return `${year}-${pad(month)}-01`;
 }
-function normalize(t: string) {
-  return t
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
-}
 
 export type CalendarStatus = "pending" | "done" | "cancelled";
 export type CalendarOrigin = "manual" | "planejamento_mensal" | "fsrs";
@@ -309,64 +303,12 @@ export async function getWeekCalendar(userId: string, weekStartKey: string, time
   return { weekStart: weekStartKey, days };
 }
 
-// Agenda dinâmica: por padrão mostra o que resta do dia atual; sem mais
-// nada hoje, avança pro próximo dia (manual ou FSRS) que tiver alguma
-// atividade — sem exigir atualização manual da pessoa.
-export async function getAgendaAnchorDate(userId: string, fromDateKey: string, timeZone: string): Promise<string | null> {
-  const supabase = await createClient();
-  const horizonEnd = addDaysKey(fromDateKey, 120);
-
-  const [{ data: nextTask }, fsrsByDay] = await Promise.all([
-    supabase
-      .from("calendar_tasks")
-      .select("scheduled_date")
-      .eq("user_id", userId)
-      .gte("scheduled_date", fromDateKey)
-      .neq("status", "cancelled")
-      .order("scheduled_date", { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-    getFsrsRevisionsInRange(userId, fromDateKey, addDaysKey(horizonEnd, 1), timeZone),
-  ]);
-
-  const candidates = [nextTask?.scheduled_date ?? null, [...fsrsByDay.keys()].sort()[0] ?? null].filter(
-    (d): d is string => Boolean(d),
-  );
-  if (candidates.length === 0) return null;
-  return candidates.sort()[0];
-}
-
 export async function getAgendaDay(userId: string, dateKey: string, timeZone: string): Promise<CalendarItem[]> {
   const [manualByDay, fsrsByDay] = await Promise.all([
     getManualItemsInRange(userId, dateKey, dateKey),
     getFsrsRevisionsInRange(userId, dateKey, addDaysKey(dateKey, 1), timeZone),
   ]);
   return mergeDayMaps(manualByDay, fsrsByDay).get(dateKey) ?? [];
-}
-
-export type CalendarSearchResult = CalendarItem;
-
-// Busca em Agenda: título, disciplina, assunto, tipo, tipo personalizado,
-// local e notas — ignora maiúsculas/minúsculas e, quando possível, acentos.
-export async function searchCalendarEvents(
-  userId: string,
-  query: string,
-  range?: { startDateKey: string; endDateKey: string },
-): Promise<CalendarSearchResult[]> {
-  const supabase = await createClient();
-  let q = supabase.from("calendar_tasks").select(TASK_SELECT).eq("user_id", userId).order("scheduled_date");
-  if (range) q = q.gte("scheduled_date", range.startDateKey).lte("scheduled_date", range.endDateKey);
-
-  const { data } = await q;
-  const items = ((data ?? []) as unknown as RawTaskRow[]).map(rowToItem);
-  if (!query.trim()) return items;
-
-  const needle = normalize(query.trim());
-  return items.filter((i) =>
-    [i.title, i.subjectName, i.topicName, i.typeCustom, i.location, i.notes]
-      .filter((v): v is string => Boolean(v))
-      .some((v) => normalize(v).includes(needle)),
-  );
 }
 
 export async function getEventById(userId: string, eventId: string): Promise<CalendarItem | null> {

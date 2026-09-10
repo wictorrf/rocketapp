@@ -4,11 +4,10 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const VIEW_KEY = "rocket-calendar-view";
-export type CalendarView = "month" | "week" | "agenda";
+export type CalendarView = "month" | "week";
 const VIEWS: { value: CalendarView; label: string }[] = [
   { value: "month", label: "Mês" },
   { value: "week", label: "Semana" },
-  { value: "agenda", label: "Agenda" },
 ];
 
 // Segunda-feira da semana que contém dateKey — mesma lógica usada em

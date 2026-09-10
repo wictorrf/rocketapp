@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { RocketIcon } from "@/components/ui/RocketIcon";
 import { EventChip } from "./EventChip";
 import { WEEKDAY_LABEL_MON_FIRST_PT } from "@/lib/constants/calendar";
 import type { MonthCalendar, CalendarItem } from "@/lib/queries/calendar";
@@ -37,7 +36,7 @@ export function MonthGrid({
         {calendar.days.map((d) => (
           <div
             key={d.dateKey}
-            className={`cal-cell clickable ${d.isToday ? "today" : ""} ${d.hasRitual ? "ritual-day" : ""} ${selectedDay === d.day ? "selected" : ""}`}
+            className={`cal-cell clickable ${d.isToday ? "today" : ""} ${selectedDay === d.day ? "selected" : ""}`}
           >
             <Link
               href={`/calendar?year=${year}&month=${month}&day=${d.day}`}
@@ -46,11 +45,6 @@ export function MonthGrid({
             />
             <div className="cal-cell-content">
               <div className="dnum">{pad(d.day)}</div>
-              {d.hasRitual && (
-                <div className="ritual-star">
-                  <RocketIcon size={12} />
-                </div>
-              )}
               {d.items.slice(0, 3).map((item) => (
                 <div key={item.id} className="cal-cell-chip-wrap">
                   <EventChip item={item} onClick={() => onSelectItem(item)} />

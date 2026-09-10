@@ -3,12 +3,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { addDaysToKey, toLocalDateKey } from "@/lib/utils/format";
-import { getUserTimezone } from "@/lib/utils/timezone";
+import { addDaysToKey } from "@/lib/utils/format";
 import { TASK_TYPE_OPTIONS } from "@/lib/constants/calendar";
 import { MAX_PILLARS } from "@/lib/constants/pillars";
 import { materializeOccurrenceDates, type RecurrenceRule } from "@/lib/calendar/recurrence";
-import { getEventById, searchCalendarEvents, type CalendarItem, type MonthlyPlanGoals } from "@/lib/queries/calendar";
+import { getEventById, type MonthlyPlanGoals } from "@/lib/queries/calendar";
 
 export type ActionState = { error: string | null };
 export type EventActionResult = { error: string | null; eventId?: string };
@@ -280,18 +279,6 @@ export async function setEventStatusAction(
 // pending/done — cancelar e reagendar vivem no menu de ações do Calendário).
 export async function toggleTaskStatusAction(taskId: string, done: boolean) {
   await setEventStatusAction(taskId, done ? "done" : "pending");
-}
-
-// Sem `searchAll`, restringe aos próximos 120 dias (o horizonte natural da
-// Agenda) — com `searchAll`, busca em todo o histórico da pessoa.
-export async function searchCalendarEventsAction(query: string, searchAll: boolean): Promise<CalendarItem[]> {
-  const { user } = await requireUser();
-  if (searchAll) return searchCalendarEvents(user.id, query);
-
-  const timeZone = await getUserTimezone();
-  const todayKey = toLocalDateKey(new Date(), timeZone);
-  const endKey = addDaysKey(todayKey, 120);
-  return searchCalendarEvents(user.id, query, { startDateKey: todayKey, endDateKey: endKey });
 }
 
 export async function duplicateCalendarEventAction(eventId: string): Promise<EventActionResult> {
