@@ -10,7 +10,8 @@ import {
   type CalendarItem,
 } from "@/lib/queries/calendar";
 import { listActiveSubjectsWithTopics } from "@/lib/queries/subjects";
-import { toLocalDateKey } from "@/lib/utils/format";
+import { toLocalDateKey, dateKeyToUtcDate, addDaysToKey } from "@/lib/utils/format";
+import { getUserTimezone } from "@/lib/utils/timezone";
 import { CalendarShell } from "@/components/calendar/CalendarShell";
 import type { CalendarView } from "@/components/calendar/ViewSwitcher";
 
@@ -24,10 +25,8 @@ function pad(n: number) {
 }
 
 function mondayOf(dateKey: string): string {
-  const d = new Date(`${dateKey}T00:00:00`);
-  const diff = (d.getDay() + 6) % 7; // dias desde a última segunda (0=segunda)
-  d.setDate(d.getDate() - diff);
-  return toLocalDateKey(d);
+  const diff = (dateKeyToUtcDate(dateKey).getUTCDay() + 6) % 7; // dias desde a última segunda (0=segunda)
+  return addDaysToKey(dateKey, -diff);
 }
 
 function first(v: string | string[] | undefined): string | undefined {
@@ -38,17 +37,19 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
   const profile = await getCurrentUserProfile();
   if (!profile) redirect("/login");
 
+  const timeZone = await getUserTimezone();
   const now = new Date();
+  const todayKey = toLocalDateKey(now, timeZone);
   const sp = await searchParams;
 
   const viewParam = first(sp.view);
   const view: CalendarView = viewParam === "week" || viewParam === "agenda" ? viewParam : "month";
   const hasExplicitView = Boolean(viewParam);
 
-  const year = Number(first(sp.year)) || now.getFullYear();
-  const month = Number(first(sp.month)) || now.getMonth() + 1;
+  const [todayYear, todayMonth] = todayKey.split("-").map(Number);
+  const year = Number(first(sp.year)) || todayYear;
+  const month = Number(first(sp.month)) || todayMonth;
   const selectedDay = Number(first(sp.day)) || null;
-  const todayKey = toLocalDateKey(now);
   const weekStart = first(sp.weekStart) || mondayOf(todayKey);
   const agendaDateParam = first(sp.date) ?? null;
 
@@ -69,12 +70,12 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
   const agendaIsSpecificDay = Boolean(agendaDateParam);
 
   if (view === "month") {
-    monthCalendar = await getMonthCalendar(profile.userId, year, month);
+    monthCalendar = await getMonthCalendar(profile.userId, year, month, timeZone);
   } else if (view === "week") {
-    weekCalendar = await getWeekCalendar(profile.userId, weekStart);
+    weekCalendar = await getWeekCalendar(profile.userId, weekStart, timeZone);
   } else {
-    agendaAnchorDateKey = agendaDateParam ?? (await getAgendaAnchorDate(profile.userId, todayKey));
-    if (agendaAnchorDateKey) agendaItems = await getAgendaDay(profile.userId, agendaAnchorDateKey);
+    agendaAnchorDateKey = agendaDateParam ?? (await getAgendaAnchorDate(profile.userId, todayKey, timeZone));
+    if (agendaAnchorDateKey) agendaItems = await getAgendaDay(profile.userId, agendaAnchorDateKey, timeZone);
   }
 
   // Data de referência do que está sendo visto agora — usada pelo
@@ -87,22 +88,14 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
         ? (agendaAnchorDateKey ?? todayKey)
         : selectedDay
           ? `${year}-${pad(month)}-${pad(selectedDay)}`
-          : year === now.getFullYear() && month === now.getMonth() + 1
+          : year === todayYear && month === todayMonth
             ? todayKey
             : `${year}-${pad(month)}-01`;
 
   const prevMonth = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
-  const prevWeek = (() => {
-    const d = new Date(`${weekStart}T00:00:00`);
-    d.setDate(d.getDate() - 7);
-    return toLocalDateKey(d);
-  })();
-  const nextWeek = (() => {
-    const d = new Date(`${weekStart}T00:00:00`);
-    d.setDate(d.getDate() + 7);
-    return toLocalDateKey(d);
-  })();
+  const prevWeek = addDaysToKey(weekStart, -7);
+  const nextWeek = addDaysToKey(weekStart, 7);
 
   let prevHref = "#";
   let nextHref = "#";
@@ -112,26 +105,18 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
   if (view === "month") {
     prevHref = `/calendar?view=month&year=${prevMonth.year}&month=${prevMonth.month}`;
     nextHref = `/calendar?view=month&year=${nextMonth.year}&month=${nextMonth.month}`;
-    todayHref = `/calendar?view=month&year=${now.getFullYear()}&month=${now.getMonth() + 1}`;
+    todayHref = `/calendar?view=month&year=${todayYear}&month=${todayMonth}`;
     headerLabel = `${monthLabel.charAt(0).toUpperCase()}${monthLabel.slice(1)} ${year}`;
   } else if (view === "week") {
     prevHref = `/calendar?view=week&weekStart=${prevWeek}`;
     nextHref = `/calendar?view=week&weekStart=${nextWeek}`;
     todayHref = `/calendar?view=week&weekStart=${mondayOf(todayKey)}`;
     const weekEnd = weekCalendar?.days[6]?.dateKey ?? weekStart;
-    headerLabel = `${new Date(`${weekStart}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} – ${new Date(`${weekEnd}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`;
+    headerLabel = `${dateKeyToUtcDate(weekStart).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" })} – ${dateKeyToUtcDate(weekEnd).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" })}`;
   } else {
     const anchor = agendaAnchorDateKey ?? todayKey;
-    const prevDay = (() => {
-      const d = new Date(`${anchor}T00:00:00`);
-      d.setDate(d.getDate() - 1);
-      return toLocalDateKey(d);
-    })();
-    const nextDay = (() => {
-      const d = new Date(`${anchor}T00:00:00`);
-      d.setDate(d.getDate() + 1);
-      return toLocalDateKey(d);
-    })();
+    const prevDay = addDaysToKey(anchor, -1);
+    const nextDay = addDaysToKey(anchor, 1);
     prevHref = `/calendar?view=agenda&date=${prevDay}`;
     nextHref = `/calendar?view=agenda&date=${nextDay}`;
     todayHref = "/calendar?view=agenda";

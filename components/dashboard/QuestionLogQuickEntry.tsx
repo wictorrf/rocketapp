@@ -10,7 +10,7 @@ import type { SubjectWithTopicsOption } from "@/lib/queries/subjects";
 
 const initialState: ActionState = { error: null };
 
-// Botão + painel autocontidos: ao contrário do QuestionLogFormPanel (usado
+// Botão + modal autocontidos: ao contrário do QuestionLogFormPanel (usado
 // dentro de um assunto, com subjectId/topicId fixos), aqui a pessoa escolhe
 // a disciplina e o assunto em cascata, já que o Dashboard não tem esse
 // contexto ambiente.
@@ -18,7 +18,7 @@ export function QuestionLogQuickEntry({ subjects }: { subjects: SubjectWithTopic
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn-quick" onClick={() => setOpen(true)}>
+      <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 10 }} onClick={() => setOpen(true)}>
         + Registrar questões
       </button>
       {open && <QuestionLogQuickForm subjects={subjects} onClose={() => setOpen(false)} />}
@@ -47,8 +47,8 @@ function QuestionLogQuickForm({ subjects, onClose }: { subjects: SubjectWithTopi
   }, [state, isPending]);
 
   return (
-    <div className="side-panel-overlay" onClick={onClose}>
-      <div className="side-panel-box" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-top">
           <h2>Registrar questões</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Fechar">
@@ -106,7 +106,7 @@ function QuestionLogQuickForm({ subjects, onClose }: { subjects: SubjectWithTopi
           <div className="field-row">
             <div className="field">
               <label htmlFor="qq-date">Data</label>
-              <input id="qq-date" name="loggedAt" type="date" required defaultValue={toLocalDateKey(new Date())} />
+              <input id="qq-date" name="loggedAt" type="date" required defaultValue={toLocalDateKey(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)} />
             </div>
             <div className="field">
               <label htmlFor="qq-type">Tipo de registro</label>

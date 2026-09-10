@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { toLocalDateKey } from "@/lib/utils/format";
+import { toLocalDateKey, dateKeyToUtcDate, addDaysToKey as addDaysKey } from "@/lib/utils/format";
 import type { CalendarTaskType } from "@/lib/constants/calendar";
 
 function pad(n: number) {
@@ -7,11 +7,6 @@ function pad(n: number) {
 }
 function firstOfMonthKey(year: number, month: number): string {
   return `${year}-${pad(month)}-01`;
-}
-function addDaysKey(dateKey: string, days: number): string {
-  const d = new Date(`${dateKey}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return toLocalDateKey(d);
 }
 function normalize(t: string) {
   return t
@@ -128,6 +123,7 @@ async function getFsrsRevisionsInRange(
   userId: string,
   startDateKey: string,
   endDateKeyExclusive: string,
+  timeZone: string,
 ): Promise<Map<string, CalendarItem[]>> {
   const supabase = await createClient();
   // Folga de 1 dia nos dois limites: o filtro SQL compara contra meia-noite
@@ -148,7 +144,7 @@ async function getFsrsRevisionsInRange(
   for (const row of data ?? []) {
     const srs = one(row.flashcard_srs_state as { due_at: string } | { due_at: string }[] | null);
     if (!srs || !row.topic_id) continue;
-    const dateKey = toLocalDateKey(new Date(srs.due_at));
+    const dateKey = toLocalDateKey(new Date(srs.due_at), timeZone);
     if (dateKey < startDateKey || dateKey >= endDateKeyExclusive) continue;
     const key = `${dateKey}::${row.topic_id}`;
     countByDayTopic.set(key, (countByDayTopic.get(key) ?? 0) + 1);
@@ -247,7 +243,7 @@ export type MonthCalendar = {
   hasMonthlyPlan: boolean;
 };
 
-export async function getMonthCalendar(userId: string, year: number, month: number): Promise<MonthCalendar> {
+export async function getMonthCalendar(userId: string, year: number, month: number, timeZone: string): Promise<MonthCalendar> {
   const supabase = await createClient();
   const daysInMonth = new Date(year, month, 0).getDate();
   const monthStart = firstOfMonthKey(year, month);
@@ -257,12 +253,12 @@ export async function getMonthCalendar(userId: string, year: number, month: numb
 
   const [manualByDay, fsrsByDay, { data: monthlyPlan }] = await Promise.all([
     getManualItemsInRange(userId, monthStart, monthEnd),
-    getFsrsRevisionsInRange(userId, monthStart, addDaysKey(monthEnd, 1)),
+    getFsrsRevisionsInRange(userId, monthStart, addDaysKey(monthEnd, 1), timeZone),
     supabase.from("monthly_plans").select("id").eq("user_id", userId).eq("month", monthStart).maybeSingle(),
   ]);
   const merged = mergeDayMaps(manualByDay, fsrsByDay);
 
-  const todayKey = toLocalDateKey(new Date());
+  const todayKey = toLocalDateKey(new Date(), timeZone);
   const days: DayCell[] = [];
   for (let day = 1; day <= daysInMonth; day++) {
     const dateKey = `${year}-${pad(month)}-${pad(day)}`;
@@ -287,14 +283,14 @@ export type WeekCalendar = {
 };
 
 // weekStartKey deve ser uma segunda-feira.
-export async function getWeekCalendar(userId: string, weekStartKey: string): Promise<WeekCalendar> {
+export async function getWeekCalendar(userId: string, weekStartKey: string, timeZone: string): Promise<WeekCalendar> {
   const weekEndKey = addDaysKey(weekStartKey, 6);
   const [manualByDay, fsrsByDay] = await Promise.all([
     getManualItemsInRange(userId, weekStartKey, weekEndKey),
-    getFsrsRevisionsInRange(userId, weekStartKey, addDaysKey(weekEndKey, 1)),
+    getFsrsRevisionsInRange(userId, weekStartKey, addDaysKey(weekEndKey, 1), timeZone),
   ]);
   const merged = mergeDayMaps(manualByDay, fsrsByDay);
-  const todayKey = toLocalDateKey(new Date());
+  const todayKey = toLocalDateKey(new Date(), timeZone);
 
   const days: DayCell[] = [];
   for (let i = 0; i < 7; i++) {
@@ -316,7 +312,7 @@ export async function getWeekCalendar(userId: string, weekStartKey: string): Pro
 // Agenda dinâmica: por padrão mostra o que resta do dia atual; sem mais
 // nada hoje, avança pro próximo dia (manual ou FSRS) que tiver alguma
 // atividade — sem exigir atualização manual da pessoa.
-export async function getAgendaAnchorDate(userId: string, fromDateKey: string): Promise<string | null> {
+export async function getAgendaAnchorDate(userId: string, fromDateKey: string, timeZone: string): Promise<string | null> {
   const supabase = await createClient();
   const horizonEnd = addDaysKey(fromDateKey, 120);
 
@@ -330,7 +326,7 @@ export async function getAgendaAnchorDate(userId: string, fromDateKey: string): 
       .order("scheduled_date", { ascending: true })
       .limit(1)
       .maybeSingle(),
-    getFsrsRevisionsInRange(userId, fromDateKey, addDaysKey(horizonEnd, 1)),
+    getFsrsRevisionsInRange(userId, fromDateKey, addDaysKey(horizonEnd, 1), timeZone),
   ]);
 
   const candidates = [nextTask?.scheduled_date ?? null, [...fsrsByDay.keys()].sort()[0] ?? null].filter(
@@ -340,10 +336,10 @@ export async function getAgendaAnchorDate(userId: string, fromDateKey: string): 
   return candidates.sort()[0];
 }
 
-export async function getAgendaDay(userId: string, dateKey: string): Promise<CalendarItem[]> {
+export async function getAgendaDay(userId: string, dateKey: string, timeZone: string): Promise<CalendarItem[]> {
   const [manualByDay, fsrsByDay] = await Promise.all([
     getManualItemsInRange(userId, dateKey, dateKey),
-    getFsrsRevisionsInRange(userId, dateKey, addDaysKey(dateKey, 1)),
+    getFsrsRevisionsInRange(userId, dateKey, addDaysKey(dateKey, 1), timeZone),
   ]);
   return mergeDayMaps(manualByDay, fsrsByDay).get(dateKey) ?? [];
 }
@@ -508,9 +504,9 @@ export type UpcomingExam = CalendarItem & { daysUntil: number };
 // Provas e compromissos futuros pro card "Próximas provas e compromissos" do
 // Dashboard — devolve o CalendarItem completo (não só um resumo) pra dar pra
 // abrir o mesmo EventFormPanel do Calendário direto a partir do card.
-export async function getUpcomingExamsAndCommitments(userId: string, limit = 5): Promise<UpcomingExam[]> {
+export async function getUpcomingExamsAndCommitments(userId: string, timeZone: string, limit = 5): Promise<UpcomingExam[]> {
   const supabase = await createClient();
-  const todayKey = toLocalDateKey(new Date());
+  const todayKey = toLocalDateKey(new Date(), timeZone);
 
   const { data } = await supabase
     .from("calendar_tasks")
@@ -522,13 +518,12 @@ export async function getUpcomingExamsAndCommitments(userId: string, limit = 5):
     .order("scheduled_date", { ascending: true })
     .limit(limit);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayUtc = dateKeyToUtcDate(todayKey);
 
   return ((data ?? []) as unknown as RawTaskRow[]).map((row) => {
     const item = rowToItem(row);
-    const examDate = new Date(`${item.scheduledDate}T00:00:00`);
-    const daysUntil = Math.round((examDate.getTime() - today.getTime()) / 86_400_000);
+    const examDate = dateKeyToUtcDate(item.scheduledDate);
+    const daysUntil = Math.round((examDate.getTime() - todayUtc.getTime()) / 86_400_000);
     return { ...item, daysUntil };
   });
 }

@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { toLocalDateKey } from "@/lib/utils/format";
+import { addDaysToKey, toLocalDateKey } from "@/lib/utils/format";
+import { getUserTimezone } from "@/lib/utils/timezone";
 import { TASK_TYPE_OPTIONS } from "@/lib/constants/calendar";
 import { MAX_PILLARS } from "@/lib/constants/pillars";
 import { materializeOccurrenceDates, type RecurrenceRule } from "@/lib/calendar/recurrence";
@@ -28,11 +29,7 @@ function revalidateCalendarPaths() {
   revalidatePath("/dashboard");
 }
 
-function addDaysKey(dateKey: string, days: number): string {
-  const d = new Date(`${dateKey}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return toLocalDateKey(d);
-}
+const addDaysKey = addDaysToKey;
 function daysBetween(a: string, b: string): number {
   return Math.round((new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime()) / 86_400_000);
 }
@@ -291,8 +288,8 @@ export async function searchCalendarEventsAction(query: string, searchAll: boole
   const { user } = await requireUser();
   if (searchAll) return searchCalendarEvents(user.id, query);
 
-  const today = new Date();
-  const todayKey = toLocalDateKey(today);
+  const timeZone = await getUserTimezone();
+  const todayKey = toLocalDateKey(new Date(), timeZone);
   const endKey = addDaysKey(todayKey, 120);
   return searchCalendarEvents(user.id, query, { startDateKey: todayKey, endDateKey: endKey });
 }

@@ -46,7 +46,8 @@ export function QuestionLogFormPanel({
 
   if (!open) return null;
 
-  const defaultDate = initialValues ? toLocalDateKey(new Date(initialValues.loggedAt)) : toLocalDateKey(new Date());
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const defaultDate = initialValues ? toLocalDateKey(new Date(initialValues.loggedAt), timeZone) : toLocalDateKey(new Date(), timeZone);
 
   return (
     <div className="side-panel-overlay" onClick={onClose}>

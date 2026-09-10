@@ -10,6 +10,8 @@ import {
   type MetricsPeriod,
   type MetricsFilters,
 } from "@/lib/queries/metrics";
+import { toLocalDateKey } from "@/lib/utils/format";
+import { getUserTimezone } from "@/lib/utils/timezone";
 import { PeriodSelector } from "@/components/metrics/PeriodSelector";
 import { MetricsFiltersBar } from "@/components/metrics/MetricsFiltersBar";
 import { FlashcardsSection } from "@/components/metrics/FlashcardsSection";
@@ -28,10 +30,12 @@ export default async function MetricsPage({ searchParams }: PageProps<"/metrics"
   const period: MetricsPeriod = VALID_PERIODS.includes(periodRaw as MetricsPeriod) ? (periodRaw as MetricsPeriod) : "week";
   const hasExplicitPeriod = Boolean(periodRaw);
 
-  const now = new Date();
-  const year = Number(one(sp.year)) || now.getFullYear();
-  const month = Number(one(sp.month)) || now.getMonth() + 1;
-  const weekDateKey = one(sp.date) || now.toISOString().slice(0, 10);
+  const timeZone = await getUserTimezone();
+  const todayKey = toLocalDateKey(new Date(), timeZone);
+  const [todayYear, todayMonth] = todayKey.split("-").map(Number);
+  const year = Number(one(sp.year)) || todayYear;
+  const month = Number(one(sp.month)) || todayMonth;
+  const weekDateKey = one(sp.date) || todayKey;
 
   const filters: MetricsFilters = {
     subjectId: one(sp.subjectId) || null,
@@ -43,10 +47,10 @@ export default async function MetricsPage({ searchParams }: PageProps<"/metrics"
 
   const [filterOptions, flashcardMetrics, questionMetrics, studyTimeMetrics, focusSuggestions] = await Promise.all([
     getMetricsFilterOptions(profile.userId),
-    getFlashcardMetrics(profile.userId, period, range, filters),
+    getFlashcardMetrics(profile.userId, period, range, timeZone, filters),
     getQuestionMetrics(profile.userId, period, range, filters),
     getStudyTimeMetrics(profile.userId, period, range, filters),
-    getFocusSuggestions(profile.userId, range, filters),
+    getFocusSuggestions(profile.userId, range, timeZone, filters),
   ]);
 
   const focusTitle = period === "week" ? "Onde focar esta semana" : period === "month" ? "Onde focar este mês" : period === "year" ? "Onde focar este ano" : "Onde focar";

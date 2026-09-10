@@ -1,4 +1,4 @@
-import { toLocalDateKey } from "@/lib/utils/format";
+import { dateKeyToUtcDate, addDaysToKey, toLocalDateKey } from "@/lib/utils/format";
 
 // Motor puro de recorrência do Calendário. O projeto não usa RRULE nem
 // biblioteca de datas — segue o mesmo padrão já estabelecido (materializar
@@ -16,11 +16,7 @@ export type RecurrenceRule = {
   count: number | null; // só considerado quando frequency === "custom"
 };
 
-function addDays(dateKey: string, days: number): string {
-  const d = new Date(`${dateKey}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return toLocalDateKey(d);
-}
+const addDays = addDaysToKey;
 
 // Retorna as datas (YYYY-MM-DD, ordem cronológica, incluindo a própria data
 // inicial) em que a série deve ter uma ocorrência. `rule === null` significa
@@ -34,14 +30,14 @@ export function materializeOccurrenceDates(startDateKey: string, rule: Recurrenc
   const countCap = rule.frequency === "custom" ? rule.count : null;
 
   if (rule.frequency === "monthly") {
-    const start = new Date(`${startDateKey}T00:00:00`);
-    const dayOfMonth = start.getDate();
+    const start = dateKeyToUtcDate(startDateKey);
+    const dayOfMonth = start.getUTCDate();
     const dates: string[] = [];
     for (let i = 0; i < 24; i++) {
-      const target = new Date(start.getFullYear(), start.getMonth() + i, 1);
-      const lastDayOfTarget = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-      target.setDate(Math.min(dayOfMonth, lastDayOfTarget));
-      const key = toLocalDateKey(target);
+      const target = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, 1));
+      const lastDayOfTarget = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+      target.setUTCDate(Math.min(dayOfMonth, lastDayOfTarget));
+      const key = toLocalDateKey(target, "UTC");
       if (key > effectiveEnd) break;
       dates.push(key);
       if (countCap && dates.length >= countCap) break;
@@ -50,7 +46,7 @@ export function materializeOccurrenceDates(startDateKey: string, rule: Recurrenc
   }
 
   // daily, weekly e custom (semanal com dias específicos + fim opcional)
-  const startWeekday = new Date(`${startDateKey}T00:00:00`).getDay();
+  const startWeekday = dateKeyToUtcDate(startDateKey).getUTCDay();
   const weekdaysSet = new Set(rule.weekdays.length > 0 ? rule.weekdays : [startWeekday]);
 
   const dates: string[] = [];
@@ -58,7 +54,7 @@ export function materializeOccurrenceDates(startDateKey: string, rule: Recurrenc
   let guard = 0;
   while (cursor <= effectiveEnd && guard <= HORIZON_DAYS) {
     guard++;
-    const weekday = new Date(`${cursor}T00:00:00`).getDay();
+    const weekday = dateKeyToUtcDate(cursor).getUTCDay();
     const matches = rule.frequency === "daily" || weekdaysSet.has(weekday);
     if (matches) {
       dates.push(cursor);

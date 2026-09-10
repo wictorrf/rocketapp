@@ -38,6 +38,17 @@
   --font-script: var(--font-dancing-script), cursive;
 }
 
+/* Dashboard (documento de requisitos): fonte única mais arredondada/jovem
+   pra títulos, textos, números e botões — sobrescreve as 3 variáveis de
+   fonte só dentro do Dashboard, sem rebrandar o app inteiro. A hierarquia
+   de peso (regular/semibold/bold) já vem das classes existentes
+   (.eyebrow, .section-title, .stat-num etc), que a Nunito Sans cobre. */
+.dashboard-page {
+  --font-display: var(--font-nunito-sans), sans-serif;
+  --font-body: var(--font-nunito-sans), sans-serif;
+  --font-mono: var(--font-nunito-sans), sans-serif;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -1225,6 +1236,26 @@ h2.section-title {
   background: none;
   border: none;
 }
+.profile-menu {
+  position: relative;
+}
+.profile-menu-arrow {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-left: 2px;
+}
+.profile-menu .kebab-dropdown {
+  min-width: 170px;
+}
+.topbar-streak {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+}
 .profile-chip img {
   width: 40px;
   height: 40px;
@@ -1266,6 +1297,12 @@ h2.section-title {
   border-radius: var(--radius-lg);
   padding: 22px;
   box-shadow: var(--shadow);
+}
+/* Destaque suave pro card "Próximas provas e compromissos" — chama atenção
+   sem pesar visualmente: leve tingimento + borda esquerda na cor do Rocket. */
+.card-highlight {
+  background: linear-gradient(180deg, rgba(104, 22, 46, 0.05), var(--white) 45%);
+  border-left: 3px solid var(--wine);
 }
 .eyebrow {
   font-family: var(--font-mono);
@@ -1602,6 +1639,54 @@ h2.section-title {
 .review-highlight-priority {
   font-size: 13px;
   color: var(--text);
+}
+
+/* ---------- Dashboard: constância de estudos ---------- */
+.consistency-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.consistency-stats > div {
+  flex: 1;
+  background: var(--ice);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: center;
+}
+.consistency-stats b {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--wine);
+}
+.consistency-stats span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.consistency-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.consistency-day {
+  border-radius: var(--radius-sm);
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--ice);
+  border: 1.5px solid transparent;
+}
+.consistency-day.active {
+  background: var(--wine);
+  color: #fff;
+}
+.consistency-day.today {
+  border-color: var(--wine);
 }
 
 /* ---------- Dashboard: planejamento do mês ---------- */
@@ -2559,6 +2644,19 @@ h2.section-title {
   gap: 16px;
   margin-bottom: 14px;
 }
+/* Dashboard: abas de período e navegação de datas na mesma linha (documento
+   de requisitos) — /metrics continua podendo quebrar em duas linhas. */
+.metrics-period.inline {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.metrics-period.inline .metric-tabs {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+.metrics-period.inline .metrics-period-nav {
+  flex-shrink: 0;
+}
 .metrics-period-nav {
   display: flex;
   align-items: center;
@@ -2738,6 +2836,28 @@ h2.section-title {
   }
   .mp-range-label {
     flex: 1;
+  }
+  /* Cabeçalho: sequência (já mostrada na gaveta mobile) e o rótulo do
+     Study Time somem pra caber o resto sem estourar a largura. */
+  .topbar {
+    padding: 16px;
+  }
+  .topbar-right {
+    gap: 8px;
+  }
+  .topbar-streak,
+  .topbar-study-label {
+    display: none;
+  }
+  .profile-chip .pname,
+  .profile-chip .prole {
+    display: none;
+  }
+  /* Em telas estreitas, deixar quebrar em duas linhas legíveis é melhor do
+     que forçar tudo numa linha só rolável. */
+  .metrics-period.inline {
+    flex-wrap: wrap;
+    overflow-x: visible;
   }
 }
 

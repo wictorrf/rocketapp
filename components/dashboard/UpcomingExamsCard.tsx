@@ -1,5 +1,4 @@
-"use client";
-
+import { TASK_TYPE_LABEL } from "@/lib/constants/calendar";
 import type { UpcomingExam } from "@/lib/queries/calendar";
 import type { CalendarItem } from "@/lib/queries/calendar";
 
@@ -9,9 +8,9 @@ function countdownLabel(daysUntil: number) {
   return `${daysUntil} dias`;
 }
 
-export function UpcomingExamsCard({ exams, onEdit }: { exams: UpcomingExam[]; onEdit: (event: CalendarItem) => void }) {
+export function UpcomingExamsCard({ exams, onEdit, onCreate }: { exams: UpcomingExam[]; onEdit: (event: CalendarItem) => void; onCreate: () => void }) {
   return (
-    <div className="card">
+    <div className="card card-highlight">
       <h2 className="section-title">Próximas provas e compromissos</h2>
       {exams.length === 0 ? (
         <p className="muted-note">
@@ -25,10 +24,13 @@ export function UpcomingExamsCard({ exams, onEdit }: { exams: UpcomingExam[]; on
               <div className="ex-info">
                 <b>{exam.title}</b>
                 <span>
+                  {exam.typeCustom || TASK_TYPE_LABEL[exam.type] || exam.type}
+                  {" · "}
                   {new Date(`${exam.scheduledDate}T00:00:00`).toLocaleDateString("pt-BR", {
                     day: "2-digit",
                     month: "long",
                   })}
+                  {exam.subjectName ? ` · ${exam.subjectName}` : ""}
                 </span>
               </div>
               <div className={`ex-badge ${exam.daysUntil <= 0 ? "today" : ""}`}>{countdownLabel(exam.daysUntil)}</div>
@@ -36,6 +38,9 @@ export function UpcomingExamsCard({ exams, onEdit }: { exams: UpcomingExam[]; on
           ))}
         </div>
       )}
+      <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 14 }} onClick={onCreate}>
+        + Adicionar compromisso
+      </button>
     </div>
   );
 }

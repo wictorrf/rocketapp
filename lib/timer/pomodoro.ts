@@ -3,7 +3,7 @@
 // pra calcular durações e transições de forma consistente.
 
 export type PomodoroPreset = "pomodoro25" | "pomodoro50";
-export type Mode = PomodoroPreset | "simulado";
+export type Mode = PomodoroPreset | "simulado" | "manual";
 export type Phase = "foco" | "descanso" | "pausa_longa" | "simulado";
 
 export const PRESETS: Record<PomodoroPreset, { focusMin: number; breakMin: number; longBreakMin: number }> = {
@@ -75,6 +75,7 @@ export const PHASE_LABEL: Record<Phase, string> = {
 export const ACTIVITY_TYPES = [
   { value: "aula", label: "Aula" },
   { value: "estudo", label: "Estudo" },
+  { value: "primeiro_contato", label: "Primeiro contato" },
   { value: "revisao", label: "Revisão" },
   { value: "flashcards", label: "Flashcards" },
   { value: "questoes", label: "Questões" },
@@ -94,4 +95,5 @@ export const MODE_LABEL: Record<Mode, string> = {
   pomodoro25: "25 / 5",
   pomodoro50: "50 / 10",
   simulado: "Simulado",
+  manual: "Registro manual",
 };

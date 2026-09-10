@@ -26,8 +26,14 @@ import {
   SIMULADO_MAX_MINUTES,
   formatCountdown,
   activityTypeLabel,
-  type Mode,
+  type PomodoroPreset,
 } from "@/lib/timer/pomodoro";
+
+// "manual" (registro retroativo de sessão de estudo) nunca é selecionável
+// no timer ao vivo — só existe como valor salvo no banco (ver
+// lib/actions/study-sessions.ts), por isso o estado local do seletor de
+// modo é mais estrito que o Mode completo.
+type PickableMode = PomodoroPreset | "simulado";
 
 const SOUND_KEY = "rocket-focus-sound";
 const NOTIF_KEY = "rocket-focus-notif";
@@ -104,7 +110,7 @@ export function FocusTimer({
 
   // preparação (antes de iniciar)
   const [selectedTopicId, setSelectedTopicId] = useState(options[0]?.topicId ?? "");
-  const [mode, setMode] = useState<Mode>("pomodoro25");
+  const [mode, setMode] = useState<PickableMode>("pomodoro25");
   const [simuladoMinutes, setSimuladoMinutes] = useState(DEFAULT_SIMULADO_MINUTES);
   const [activityType, setActivityType] = useState("estudo");
   const [activityTypeCustom, setActivityTypeCustom] = useState("");

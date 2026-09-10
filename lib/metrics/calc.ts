@@ -5,6 +5,15 @@
 import { Rating } from "@/lib/srs/fsrs";
 import { toLocalDateKey } from "@/lib/utils/format";
 
+// resolvePeriodRange (mais abaixo) monta os limites de período com `new
+// Date(ano, mês, dia)` — fuso implícito do runtime do servidor, não da
+// usuária. As funções de bucket/dedup abaixo caminham dia a dia a partir
+// desses limites com os mesmos métodos locais, então precisam ler de volta
+// nesse MESMO fuso pra não desalinhar — não é o fuso "certo" da usuária
+// (esse fica em lib/utils/timezone.ts, usado pra "hoje"), só o fuso
+// consistente com o resto desta função.
+const RUNTIME_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 export type MetricsPeriod = "week" | "month" | "year" | "all";
 
 export const PERIOD_LABEL: Record<MetricsPeriod, string> = {
@@ -121,7 +130,7 @@ export function firstReviewPerCardPerDay<T>(
 ): T[] {
   const seen = new Map<string, T>();
   for (const row of rows) {
-    const key = `${getCardId(row)}::${toLocalDateKey(new Date(getReviewedAtIso(row)))}`;
+    const key = `${getCardId(row)}::${toLocalDateKey(new Date(getReviewedAtIso(row)), RUNTIME_TZ)}`;
     const existing = seen.get(key);
     if (!existing || getReviewedAtIso(row) < getReviewedAtIso(existing)) seen.set(key, row);
   }
@@ -157,7 +166,7 @@ export function compareToPrevious(current: number, previous: number | null): Com
 // período).
 export function evolutionBucketKey(iso: string, granularity: "day" | "month"): string {
   const d = new Date(iso);
-  if (granularity === "day") return toLocalDateKey(d);
+  if (granularity === "day") return toLocalDateKey(d, RUNTIME_TZ);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 

@@ -6,7 +6,7 @@ import { resolveTaskColor, TASK_TYPE_LABEL } from "@/lib/constants/calendar";
 import { EventActionsMenu } from "@/components/calendar/EventActionsMenu";
 import { KebabMenu, type KebabAction } from "@/components/ui/KebabMenu";
 import { toggleTaskStatusAction, setPlanActionStatusAction, deletePlanActionAction } from "@/lib/actions/calendar";
-import { startReviewSessionAction } from "@/lib/actions/review";
+import { startReviewSessionAction, startMixedReviewSessionAction } from "@/lib/actions/review";
 import type { ChecklistItem } from "@/lib/queries/home";
 
 export function ChecklistItemRow({ item, onEdit }: { item: ChecklistItem; onEdit: (item: ChecklistItem) => void }) {
@@ -99,11 +99,15 @@ export function ChecklistItemRow({ item, onEdit }: { item: ChecklistItem; onEdit
       <button type={isFsrs ? "submit" : "button"} className="checklist-body" onClick={isFsrs ? undefined : handleTitleClick}>
         <b style={optimisticDone ? { textDecoration: "line-through" } : undefined}>
           {item.emoji ? `${item.emoji} ` : ""}
-          {isFsrs ? `Revisar ${item.cardCount} ${item.cardCount === 1 ? "flashcard" : "flashcards"} de ${item.title}` : item.title}
+          {item.mixed
+            ? "Revisar flashcards"
+            : isFsrs
+              ? `Revisar ${item.cardCount} ${item.cardCount === 1 ? "flashcard" : "flashcards"} de ${item.title}`
+              : item.title}
         </b>
         <div className="checklist-meta">
           {isFsrs ? (
-            <span>Revisão</span>
+            <span>{item.mixed ? `${item.cardCount} ${item.cardCount === 1 ? "cartão pendente" : "cartões pendentes"}` : "Revisão"}</span>
           ) : (
             <span>{typeLabel}</span>
           )}
@@ -116,7 +120,7 @@ export function ChecklistItemRow({ item, onEdit }: { item: ChecklistItem; onEdit
             </span>
           )}
           {isCancelled && <span>Cancelada</span>}
-          {isFsrs && item.reviewedTodayCount !== null && item.reviewedTodayCount > 0 && (
+          {isFsrs && !item.mixed && item.reviewedTodayCount !== null && item.reviewedTodayCount > 0 && (
             <span>
               {item.reviewedTodayCount} de {(item.cardCount ?? 0) + item.reviewedTodayCount} revisados
             </span>
@@ -139,7 +143,15 @@ export function ChecklistItemRow({ item, onEdit }: { item: ChecklistItem; onEdit
   // Revisão FSRS: a página /review exige uma review_sessions criada antes
   // (senão redireciona de volta pro assunto) — igual ao "Iniciar revisão de
   // hoje" da página do assunto, precisa de um <form> de verdade chamando a
-  // action, não dá pra só navegar direto pra URL.
+  // action, não dá pra só navegar direto pra URL. O item agregado (mixed)
+  // usa a revisão mista, com todos os assuntos na mesma fila.
+  if (isFsrs && item.mixed) {
+    return (
+      <form action={startMixedReviewSessionAction} className={rowClassName}>
+        {rowContent}
+      </form>
+    );
+  }
   if (isFsrs) {
     return (
       <form action={startReviewSessionAction} className={rowClassName}>

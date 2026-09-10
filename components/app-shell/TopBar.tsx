@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { titleForPath } from "./nav-items";
+import { ProfileMenu } from "./ProfileMenu";
 
 export function TopBar({
+  streak,
   displayName,
   areaLabel,
   photoUrl,
   onMenuClick,
 }: {
+  streak: number;
   displayName: string;
   areaLabel: string;
   photoUrl: string | null;
@@ -31,22 +34,13 @@ export function TopBar({
         <h1>{titleForPath(pathname)}</h1>
       </div>
       <div className="topbar-right">
-        <Link href="/profile" className="profile-chip">
-          {photoUrl ? (
-            <img src={photoUrl} alt="" />
-          ) : (
-            <div
-              className="pc-photo"
-              style={{ width: 40, height: 40, fontSize: 16 }}
-            >
-              👤
-            </div>
-          )}
-          <div>
-            <div className="pname">{displayName}</div>
-            <div className="prole">{areaLabel}</div>
-          </div>
+        <span className="topbar-streak" title={`Sequência atual: ${streak} ${streak === 1 ? "dia" : "dias"}`}>
+          🔥 {streak} {streak === 1 ? "dia" : "dias"}
+        </span>
+        <Link href="/focus" className="btn btn-primary btn-sm">
+          🕐 <span className="topbar-study-label">Study Time</span>
         </Link>
+        <ProfileMenu displayName={displayName} areaLabel={areaLabel} photoUrl={photoUrl} />
       </div>
     </div>
   );

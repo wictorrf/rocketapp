@@ -18,13 +18,34 @@ export function formatHours(minutes: number): string {
   return `${hours % 1 === 0 ? hours.toFixed(0) : hours.toFixed(1)}h`;
 }
 
-// Inverso: formata um Date como "YYYY-MM-DD" no fuso local (não em UTC como
-// `toISOString()` faz) — pra agrupar/comparar por "dia local do usuário".
-export function toLocalDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+// Formata um Date como "YYYY-MM-DD" no fuso informado — pra agrupar/comparar
+// por "dia local da usuária" (não do servidor, e não UTC como
+// `toISOString()` faz). `timeZone` é obrigatório de propósito: força quem
+// chama a decidir explicitamente se quer o fuso real da usuária (leia de
+// getUserTimezone) ou um fuso fixo pra aritmética pura de datas (ver
+// dateKeyToUtcDate/addDaysToKey abaixo).
+export function toLocalDateKey(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+// Pra aritmética de datas que não tem nada a ver com "agora" (materializar
+// ocorrências de recorrência, somar dias a uma chave já conhecida) — ancora
+// em UTC dos dois lados (construção e leitura) pra nunca depender do fuso do
+// servidor nem da usuária, e nunca arriscar virar o dia por causa de um
+// fuso incorreto no meio do caminho.
+export function dateKeyToUtcDate(dateKey: string): Date {
+  return new Date(`${dateKey}T00:00:00Z`);
+}
+
+export function addDaysToKey(dateKey: string, days: number): string {
+  const d = dateKeyToUtcDate(dateKey);
+  d.setUTCDate(d.getUTCDate() + days);
+  return toLocalDateKey(d, "UTC");
 }
 
 // Formata "daqui a quanto tempo" pra datas/horas futuras (ex: próxima

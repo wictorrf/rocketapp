@@ -35,6 +35,7 @@ export function AppShell({
       <Sidebar streak={streak} isAdmin={isAdmin} />
       <div className="main">
         <TopBar
+          streak={streak}
           displayName={displayName}
           areaLabel={areaLabel}
           photoUrl={photoUrl}

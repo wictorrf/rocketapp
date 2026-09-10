@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/queries/profile";
 import { computeStreak } from "@/lib/queries/streak";
+import { getUserTimezone } from "@/lib/utils/timezone";
 import { AppShell } from "@/components/app-shell/AppShell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -8,7 +9,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!profile) redirect("/login");
   if (!profile.onboardingCompleted) redirect("/personalize");
 
-  const streak = await computeStreak(profile.userId);
+  const timeZone = await getUserTimezone();
+  const streak = await computeStreak(profile.userId, timeZone);
 
   return (
     <AppShell

@@ -119,8 +119,8 @@ export function EventFormPanel({
   if (!open) return null;
 
   return (
-    <div className="side-panel-overlay" onClick={requestClose}>
-      <div className="side-panel-box" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={requestClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-top">
           <h2>{mode === "edit" ? "Editar evento" : "Novo evento"}</h2>
           <button type="button" className="icon-btn" onClick={requestClose} aria-label="Fechar">

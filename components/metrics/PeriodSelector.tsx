@@ -24,6 +24,8 @@ export function PeriodSelector({
   rangeLabel,
   basePath = "/metrics",
   periods = DEFAULT_PERIODS,
+  showTodayShortcut = true,
+  inline = false,
 }: {
   period: MetricsPeriod;
   hasExplicitPeriod: boolean;
@@ -33,6 +35,12 @@ export function PeriodSelector({
   rangeLabel: string;
   basePath?: string;
   periods?: MetricsPeriod[];
+  // O Dashboard já centra tudo em "hoje" e removeu esse atalho do
+  // documento de requisitos — /metrics continua com ele por padrão.
+  showTodayShortcut?: boolean;
+  // Funde as abas de período e a navegação de datas numa única linha
+  // (documento de requisitos do Dashboard) — /metrics mantém duas linhas.
+  inline?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -79,7 +87,7 @@ export function PeriodSelector({
   const yearOptions = Array.from({ length: Math.max(1, currentYear - FIRST_YEAR + 1) }, (_, i) => FIRST_YEAR + i);
 
   return (
-    <div className="metrics-period">
+    <div className={inline ? "metrics-period inline" : "metrics-period"}>
       <div className="metric-tabs">
         {periods.map((p) => (
           <button key={p} type="button" className={period === p ? "active" : ""} onClick={() => selectPeriod(p)}>
@@ -117,19 +125,21 @@ export function PeriodSelector({
               ))}
             </select>
           ) : (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() =>
-                router.push(
-                  period === "week"
-                    ? withParams(basePath, searchParams, { date: todayKey })
-                    : withParams(basePath, searchParams, { year: String(currentYear), month: String(currentMonth) }),
-                )
-              }
-            >
-              Hoje
-            </button>
+            showTodayShortcut && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() =>
+                  router.push(
+                    period === "week"
+                      ? withParams(basePath, searchParams, { date: todayKey })
+                      : withParams(basePath, searchParams, { year: String(currentYear), month: String(currentMonth) }),
+                  )
+                }
+              >
+                Hoje
+              </button>
+            )
           )}
         </div>
       )}
