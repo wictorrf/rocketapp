@@ -19,6 +19,7 @@ const SORT_OPTIONS: { value: SubjectSortKey; label: string }[] = [
   { value: "topic_count", label: "Maior quantidade de assuntos" },
   { value: "flashcard_count", label: "Maior quantidade de flashcards" },
   { value: "pending_reviews", label: "Maior quantidade de revisões pendentes" },
+  { value: "manual", label: "Ordem manual (arrastar e soltar)" },
 ];
 
 export function SubjectFilters({

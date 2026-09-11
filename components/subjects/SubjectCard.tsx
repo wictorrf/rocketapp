@@ -11,7 +11,7 @@ import { getContrastText } from "@/lib/constants/entity-colors";
 import { formatRelativeDays, formatHours } from "@/lib/utils/format";
 import type { SubjectSummary } from "@/lib/queries/subjects";
 
-export function SubjectCard({ subject }: { subject: SubjectSummary }) {
+export function SubjectCard({ subject, dragHandle }: { subject: SubjectSummary; dragHandle?: React.ReactNode }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -31,6 +31,7 @@ export function SubjectCard({ subject }: { subject: SubjectSummary }) {
 
   return (
     <div className="subject-row">
+      {dragHandle}
       <Link href={`/subjects/${subject.id}/topics`} className="subject-row-link">
         <div className="subject-icon" style={{ background: color, color: getContrastText(color) }}>
           {subject.icon ?? "📚"}

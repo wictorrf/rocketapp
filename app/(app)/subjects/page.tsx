@@ -3,7 +3,7 @@ import { getCurrentUserProfile } from "@/lib/queries/profile";
 import { listSubjectsWithSummary, type SubjectStatusFilter, type SubjectSortKey } from "@/lib/queries/subjects";
 import { NewSubjectButton } from "@/components/subjects/NewSubjectButton";
 import { SubjectFilters } from "@/components/subjects/SubjectFilters";
-import { SubjectCard } from "@/components/subjects/SubjectCard";
+import { SubjectList } from "@/components/subjects/SubjectList";
 
 const VALID_STATUS: SubjectStatusFilter[] = ["all", "active", "archived", "pending"];
 const VALID_SORT: SubjectSortKey[] = [
@@ -14,6 +14,7 @@ const VALID_SORT: SubjectSortKey[] = [
   "topic_count",
   "flashcard_count",
   "pending_reviews",
+  "manual",
 ];
 
 export default async function SubjectsPage({ searchParams }: PageProps<"/subjects">) {
@@ -58,9 +59,7 @@ export default async function SubjectsPage({ searchParams }: PageProps<"/subject
         </div>
       )}
 
-      {subjects.map((subject) => (
-        <SubjectCard key={subject.id} subject={subject} />
-      ))}
+      <SubjectList subjects={subjects} sort={sort} />
     </div>
   );
 }

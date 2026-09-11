@@ -229,3 +229,21 @@ export async function listActiveSubjectsForMoveAction(excludeId: string) {
   if (!user) redirect("/login");
   return listActiveSubjectsForMove(user.id, excludeId);
 }
+
+export async function reorderSubjectsAction(orderedSubjectIds: string[]): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const results = await Promise.all(
+    orderedSubjectIds.map((subjectId, index) =>
+      supabase.from("subjects").update({ sort_order: index }).eq("id", subjectId).eq("user_id", user.id),
+    ),
+  );
+  if (results.some((r) => r.error)) return { error: "Não foi possível salvar a nova ordem." };
+
+  revalidatePath("/subjects");
+  return { error: null };
+}
