@@ -52,7 +52,7 @@ export function FlashcardsSection({ metrics }: { metrics: FlashcardMetrics }) {
         </div>
         <div className="card">
           <h3 className="card-subtitle">Estágio dos seus cartões</h3>
-          <StageDistributionList distribution={metrics.stageDistribution} consolidatedCount={metrics.consolidatedCount} />
+          <StageDistributionList distribution={metrics.stageDistribution} linkTo="/flashcards" />
         </div>
       </div>
     </>

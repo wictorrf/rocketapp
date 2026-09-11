@@ -1,17 +1,20 @@
 import Link from "next/link";
-import { STAGE_LABEL_PT, type StageLabel } from "@/lib/srs/fsrs";
+import { STAGE_BREAKDOWN_LABEL_PT, type StageBreakdownLabel } from "@/lib/srs/fsrs";
 import type { StageDistribution } from "@/lib/queries/metrics";
 
-const ORDER: StageLabel[] = ["novo", "aprendendo", "revisao", "reaprendizagem", "suspenso"];
-const DOT_CLASS: Record<StageLabel, string> = {
+const ORDER: StageBreakdownLabel[] = ["novo", "aprendendo", "revisao", "reaprendizagem", "consolidado"];
+const DOT_CLASS: Record<StageBreakdownLabel, string> = {
   novo: "fc-stage novo",
   aprendendo: "fc-stage aprendendo",
   revisao: "fc-stage revisao",
   reaprendizagem: "fc-stage reaprendizagem",
-  suspenso: "fc-stage suspenso",
+  consolidado: "fc-stage consolidado",
 };
 
-export function StageDistributionList({ distribution, consolidatedCount }: { distribution: StageDistribution; consolidatedCount: number }) {
+// `linkTo` é opcional: em Métricas cada linha leva de volta pro hub de
+// Flashcards; dentro do próprio hub (Fase Flashcards) um link pra "/flashcards"
+// não faz sentido, então as linhas ficam estáticas.
+export function StageDistributionList({ distribution, linkTo }: { distribution: StageDistribution; linkTo?: string }) {
   const total = ORDER.reduce((sum, k) => sum + distribution[k], 0);
 
   if (total === 0) {
@@ -20,18 +23,24 @@ export function StageDistributionList({ distribution, consolidatedCount }: { dis
 
   return (
     <div>
-      {ORDER.map((key) => (
-        <Link href="/flashcards" key={key} className="weak-point">
-          <span className={DOT_CLASS[key]} style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%" }} />
-          <span className="wp-name">{STAGE_LABEL_PT[key]}</span>
-          <span className="wp-pct">{distribution[key]}</span>
-        </Link>
-      ))}
-      {consolidatedCount > 0 && (
-        <p className="chart-x" style={{ marginTop: 10, textAlign: "left" }}>
-          {consolidatedCount} {consolidatedCount === 1 ? "cartão consolidado" : "cartões consolidados"} (em revisão há 21+ dias de estabilidade)
-        </p>
-      )}
+      {ORDER.map((key) => {
+        const content = (
+          <>
+            <span className={DOT_CLASS[key]} style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%" }} />
+            <span className="wp-name">{STAGE_BREAKDOWN_LABEL_PT[key]}</span>
+            <span className="wp-pct">{distribution[key]}</span>
+          </>
+        );
+        return linkTo ? (
+          <Link href={linkTo} key={key} className="weak-point">
+            {content}
+          </Link>
+        ) : (
+          <div key={key} className="weak-point">
+            {content}
+          </div>
+        );
+      })}
     </div>
   );
 }

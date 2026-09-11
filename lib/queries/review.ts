@@ -1,5 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
-import { State, previewGrades, deriveStageLabel, needsReinforcement, retrievability, estimateReviewMinutes, formatInterval, type Grade, type GradePreview, type StoredSrsState } from "@/lib/srs/fsrs";
+import {
+  State,
+  previewGrades,
+  deriveStageLabel,
+  deriveStageBreakdownLabel,
+  isConsolidated,
+  needsReinforcement,
+  retrievability,
+  estimateReviewMinutes,
+  formatInterval,
+  type Grade,
+  type GradePreview,
+  type StoredSrsState,
+  type StageBreakdownLabel,
+} from "@/lib/srs/fsrs";
+import { toLocalDateKey, addDaysToKey, dateKeyToUtcDate } from "@/lib/utils/format";
+import { startOfDayInTimeZone } from "@/lib/utils/timezone";
+import { resolvePeriodRange, bucketDates, type DayBar } from "@/lib/metrics/calc";
 
 // Limite diário de cartões Novos incluídos numa fila — aproximação simples
 // (não rastreia "quantos novos já foram iniciados hoje" entre sessões
@@ -196,6 +213,7 @@ export type TopicHubStatus =
   | "revisao"
   | "reaprendizagem"
   | "suspenso"
+  | "consolidado"
   | "precisa_reforco"
   | "em_dia";
 
@@ -257,6 +275,7 @@ export async function getFlashcardsHubSummary(userId: string): Promise<TopicHubS
     let reviewCount = 0;
     let relearningCount = 0;
     let suspendedCount = 0;
+    let consolidatedCount = 0;
     let needsReinforcementCount = 0;
     let lastActivityAt: string | null = null;
     let worstRecuperability: number | null = null;
@@ -277,6 +296,7 @@ export async function getFlashcardsHubSummary(userId: string): Promise<TopicHubS
       if (stage === "aprendendo") learningCount += 1;
       else if (stage === "revisao") reviewCount += 1;
       else if (stage === "reaprendizagem") relearningCount += 1;
+      if (isConsolidated(srs.state, srs.stability, false)) consolidatedCount += 1;
       if (needsReinforcement(stored, false, now)) needsReinforcementCount += 1;
 
       const dueAt = new Date(srs.due_at);
@@ -299,6 +319,7 @@ export async function getFlashcardsHubSummary(userId: string): Promise<TopicHubS
     if (reviewCount > 0) statuses.add("revisao");
     if (relearningCount > 0) statuses.add("reaprendizagem");
     if (suspendedCount > 0) statuses.add("suspenso");
+    if (consolidatedCount > 0) statuses.add("consolidado");
     if (needsReinforcementCount > 0) statuses.add("precisa_reforco");
     if (overdueCount === 0 && dueTodayCount === 0 && newCount === 0 && totalActive > 0) statuses.add("em_dia");
 
@@ -351,4 +372,90 @@ export async function getFlashcardReviewHistory(flashcardId: string): Promise<Re
     reviewedAt: r.reviewed_at,
     intervalLabel: formatInterval(r.scheduled_days),
   }));
+}
+
+export type FlashcardHubEvolution = { week: DayBar[]; month: DayBar[]; year: DayBar[] };
+
+// "Constância de revisão" recente pro hub de Flashcards — sempre o recorte
+// ATUAL (semana/mês/ano correntes), sem navegação pra período anterior (isso
+// é papel de Métricas). Uma consulta por recorte, já filtrada pelo range certo.
+export async function getFlashcardReviewEvolution(userId: string, timeZone: string): Promise<FlashcardHubEvolution> {
+  const supabase = await createClient();
+  const todayKey = toLocalDateKey(new Date(), timeZone);
+  const [year, month] = todayKey.split("-").map(Number);
+  const weekRange = resolvePeriodRange("week", { year, month, weekDateKey: todayKey });
+  const monthRange = resolvePeriodRange("month", { year, month, weekDateKey: null });
+  const yearRange = resolvePeriodRange("year", { year, month, weekDateKey: null });
+
+  async function fetchReviewedAt(start: Date | null, end: Date): Promise<string[]> {
+    let q = supabase.from("review_logs").select("reviewed_at").eq("user_id", userId).lt("reviewed_at", end.toISOString());
+    if (start) q = q.gte("reviewed_at", start.toISOString());
+    const { data } = await q;
+    return (data ?? []).map((r) => r.reviewed_at);
+  }
+
+  const [weekLogs, monthLogs, yearLogs] = await Promise.all([
+    fetchReviewedAt(weekRange.start, weekRange.end),
+    fetchReviewedAt(monthRange.start, monthRange.end),
+    fetchReviewedAt(yearRange.start, yearRange.end),
+  ]);
+
+  return {
+    week: bucketDates(weekLogs, weekRange, "day"),
+    month: bucketDates(monthLogs, monthRange, "day"),
+    year: bucketDates(yearLogs, yearRange, "month"),
+  };
+}
+
+const FORECAST_DAYS = 7;
+const WEEKDAY_SHORT_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+// "Carga futura de revisão" — quantos cartões vencem em cada um dos próximos
+// dias, pra estudante se organizar. Feature nova (documento de requisitos de
+// Flashcards), sem precedente em Métricas.
+export async function getUpcomingReviewLoad(userId: string, timeZone: string): Promise<DayBar[]> {
+  const supabase = await createClient();
+  const todayKey = toLocalDateKey(new Date(), timeZone);
+  const startIso = startOfDayInTimeZone(todayKey, timeZone).toISOString();
+  const endIso = startOfDayInTimeZone(addDaysToKey(todayKey, FORECAST_DAYS), timeZone).toISOString();
+
+  const { data } = await supabase
+    .from("flashcard_srs_state")
+    .select("due_at, suspended_at, flashcards!inner(user_id)")
+    .eq("flashcards.user_id", userId)
+    .is("suspended_at", null)
+    .gte("due_at", startIso)
+    .lt("due_at", endIso);
+
+  const buckets = new Map<string, number>();
+  for (let i = 0; i < FORECAST_DAYS; i++) buckets.set(addDaysToKey(todayKey, i), 0);
+  for (const row of data ?? []) {
+    const key = toLocalDateKey(new Date(row.due_at), timeZone);
+    if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1);
+  }
+
+  return [...buckets.entries()].map(([key, value]) => ({
+    key,
+    label: WEEKDAY_SHORT_PT[dateKeyToUtcDate(key).getUTCDay()],
+    value,
+  }));
+}
+
+// Distribuição de estágio de todos os cartões da usuária, sempre "agora" (sem
+// período/filtro) — alimenta "Estágio dos cartões" no hub de Flashcards.
+// Mesma regra de Consolidados-no-lugar-de-Suspenso usada em Métricas.
+export async function getFlashcardStageDistribution(userId: string): Promise<Record<StageBreakdownLabel, number>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("flashcard_srs_state")
+    .select("state, stability, suspended_at, flashcards!inner(user_id)")
+    .eq("flashcards.user_id", userId);
+
+  const distribution: Record<StageBreakdownLabel, number> = { novo: 0, aprendendo: 0, revisao: 0, reaprendizagem: 0, consolidado: 0 };
+  for (const row of data ?? []) {
+    const suspended = Boolean(row.suspended_at);
+    const stage = deriveStageBreakdownLabel(row.state as State, row.stability, suspended);
+    distribution[stage] += 1;
+  }
+  return distribution;
 }

@@ -173,3 +173,38 @@ export function evolutionBucketKey(iso: string, granularity: "day" | "month"): s
 export function granularityFor(period: MetricsPeriod): "day" | "month" {
   return period === "year" || period === "all" ? "month" : "day";
 }
+
+export type DayBar = { key: string; label: string; value: number };
+
+const MONTH_SHORT_PT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+export function bucketLabel(key: string, granularity: "day" | "month"): string {
+  if (granularity === "month") {
+    const [y, m] = key.split("-");
+    return `${MONTH_SHORT_PT[Number(m) - 1]}/${y.slice(2)}`;
+  }
+  const d = new Date(`${key}T00:00:00`);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Monta a série com todos os baldes do período já zerados (pra dia sem
+// revisão/questão/estudo aparecer como zero verdadeiro, não como ausência),
+// depois soma cada ocorrência no balde certo. Sem início definido (Todo o
+// período), os baldes nascem só a partir dos dados encontrados.
+export function bucketDates(dates: string[], range: PeriodRange, granularity: "day" | "month"): DayBar[] {
+  const map = new Map<string, number>();
+  if (range.start) {
+    const cursor = new Date(range.start);
+    if (granularity === "month") cursor.setDate(1);
+    while (cursor < range.end) {
+      map.set(evolutionBucketKey(cursor.toISOString(), granularity), 0);
+      if (granularity === "month") cursor.setMonth(cursor.getMonth() + 1);
+      else cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+  for (const iso of dates) {
+    const key = evolutionBucketKey(iso, granularity);
+    map.set(key, (map.get(key) ?? 0) + 1);
+  }
+  return [...map.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([key, value]) => ({ key, label: bucketLabel(key, granularity), value }));
+}

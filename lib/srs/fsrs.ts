@@ -187,6 +187,29 @@ export function isConsolidated(state: State, stability: number, suspended: boole
   return !suspended && state === State.Review && stability >= CONSOLIDATED_STABILITY_DAYS;
 }
 
+// Resumo de estágio pra visão agregada (Métricas, hub de Flashcards) — só
+// pra essa visão, "Consolidados" ocupa o lugar de "Suspenso": suspensão
+// continua existindo de verdade (flag manual, filtro próprio, ação de
+// reativar), só deixa de ser uma das 5 fatias deste resumo específico. Um
+// cartão suspenso cai no estágio de base conforme o estado FSRS por trás.
+export type StageBreakdownLabel = "novo" | "aprendendo" | "revisao" | "reaprendizagem" | "consolidado";
+
+export const STAGE_BREAKDOWN_LABEL_PT: Record<StageBreakdownLabel, string> = {
+  novo: "Novo",
+  aprendendo: "Em aprendizagem",
+  revisao: "Em revisão",
+  reaprendizagem: "Em reaprendizagem",
+  consolidado: "Consolidados",
+};
+
+export function deriveStageBreakdownLabel(state: State, stability: number, suspended: boolean): StageBreakdownLabel {
+  if (isConsolidated(state, stability, suspended)) return "consolidado";
+  if (state === State.New) return "novo";
+  if (state === State.Learning) return "aprendendo";
+  if (state === State.Relearning) return "reaprendizagem";
+  return "revisao";
+}
+
 // "Precisa de reforço": esquecimentos recorrentes, dificuldade estimada
 // alta ou recuperabilidade atual baixa. Sinalização visual apenas — não
 // altera o agendamento do FSRS.

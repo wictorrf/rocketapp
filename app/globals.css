@@ -47,7 +47,8 @@
 .dashboard-page,
 .calendar-page,
 .subjects-page,
-.metrics-page {
+.metrics-page,
+.flashcards-page {
   --font-display: var(--font-nunito-sans), sans-serif;
   --font-body: var(--font-nunito-sans), sans-serif;
   --font-mono: var(--font-nunito-sans), sans-serif;
@@ -1633,6 +1634,31 @@ h2.section-title {
   font-size: 22px;
   font-weight: 600;
   color: var(--wine);
+}
+.review-highlight-counts .rh-today b {
+  color: var(--amber);
+}
+.review-highlight-counts .rh-new b {
+  color: var(--green);
+}
+.fc-hero-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: linear-gradient(135deg, var(--pink-soft), var(--lavender));
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+.fc-hero-banner .icon {
+  font-size: 20px;
+  line-height: 1;
+}
+.fc-hero-banner p {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+  margin: 0;
 }
 .review-highlight-counts span {
   font-size: 11px;
@@ -3527,6 +3553,10 @@ h2.section-title {
   background: var(--ice-dim);
   color: var(--text-muted);
 }
+.fc-stage.consolidado {
+  background: #e5eef8;
+  color: var(--blue-academic);
+}
 
 /* ---------- página geral de Flashcards ---------- */
 .fc-hub-header {
@@ -3587,6 +3617,10 @@ h2.section-title {
 .fc-hub-count.new {
   background: #e3f0ea;
   color: var(--green);
+}
+.fc-hub-count.due-today {
+  background: #fbf0dc;
+  color: var(--amber);
 }
 .fc-hub-count.em-dia {
   background: #e3f0ea;

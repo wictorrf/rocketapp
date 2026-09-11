@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { State, deriveStageLabel, isConsolidated, type StageLabel } from "@/lib/srs/fsrs";
+import { State, deriveStageBreakdownLabel, type StageBreakdownLabel } from "@/lib/srs/fsrs";
 import { toLocalDateKey, addDaysToKey } from "@/lib/utils/format";
 import { startOfDayInTimeZone } from "@/lib/utils/timezone";
 import { activityTypeLabel, ACTIVITY_TYPES } from "@/lib/timer/pomodoro";
@@ -8,15 +8,19 @@ import {
   type MetricsPeriod,
   type PeriodRange,
   type Comparison,
+  type DayBar,
   isRemembered,
   weightedAccuracyPct,
   firstReviewPerCardPerDay,
   compareToPrevious,
   evolutionBucketKey,
   granularityFor,
+  bucketDates,
+  bucketLabel,
 } from "@/lib/metrics/calc";
 
 export type { MetricsPeriod } from "@/lib/metrics/calc";
+export type { DayBar } from "@/lib/metrics/calc";
 export { PERIOD_LABEL, FIRST_YEAR, resolvePeriodRange } from "@/lib/metrics/calc";
 
 export type MetricsFilters = {
@@ -27,8 +31,6 @@ export type MetricsFilters = {
 
 const EMPTY_FILTERS: MetricsFilters = { subjectId: null, topicId: null, activityType: null };
 
-export type DayBar = { key: string; label: string; value: number };
-
 // "Todo o período" (start === null) nunca deve levar limite superior junto —
 // `range.end` nesse caso é só um sentinela de data extrema (usado pelos
 // loops de bucket, que já ignoram o range quando start é nulo) pra não
@@ -37,39 +39,6 @@ export type DayBar = { key: string; label: string; value: number };
 function isoRangeOf(start: Date | null, end: Date | null) {
   if (!start) return { startIso: null, endIso: null };
   return { startIso: start.toISOString(), endIso: end ? end.toISOString() : null };
-}
-
-const MONTH_SHORT_PT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-
-function bucketLabel(key: string, granularity: "day" | "month"): string {
-  if (granularity === "month") {
-    const [y, m] = key.split("-");
-    return `${MONTH_SHORT_PT[Number(m) - 1]}/${y.slice(2)}`;
-  }
-  const d = new Date(`${key}T00:00:00`);
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-// Monta a série com todos os baldes do período já zerados (pra dia sem
-// revisão/questão/estudo aparecer como zero verdadeiro, não como ausência),
-// depois soma cada ocorrência no balde certo. Sem início definido (Todo o
-// período), os baldes nascem só a partir dos dados encontrados.
-function bucketDates(dates: string[], range: PeriodRange, granularity: "day" | "month"): DayBar[] {
-  const map = new Map<string, number>();
-  if (range.start) {
-    const cursor = new Date(range.start);
-    if (granularity === "month") cursor.setDate(1);
-    while (cursor < range.end) {
-      map.set(evolutionBucketKey(cursor.toISOString(), granularity), 0);
-      if (granularity === "month") cursor.setMonth(cursor.getMonth() + 1);
-      else cursor.setDate(cursor.getDate() + 1);
-    }
-  }
-  for (const iso of dates) {
-    const key = evolutionBucketKey(iso, granularity);
-    map.set(key, (map.get(key) ?? 0) + 1);
-  }
-  return [...map.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([key, value]) => ({ key, label: bucketLabel(key, granularity), value }));
 }
 
 export type QuestionEvolutionPoint = { key: string; label: string; done: number; accuracyPct: number | null };
@@ -135,7 +104,7 @@ export async function getMetricsFilterOptions(userId: string): Promise<MetricsSu
 }
 
 // ---------- Flashcards ----------
-export type StageDistribution = Record<StageLabel, number>;
+export type StageDistribution = Record<StageBreakdownLabel, number>;
 
 export type FlashcardMetrics = {
   reviewedCount: number;
@@ -145,7 +114,6 @@ export type FlashcardMetrics = {
   retentionSampleCount: number;
   overdueCount: number;
   dueTodayCount: number;
-  consolidatedCount: number;
   stageDistribution: StageDistribution;
   reviewsByDay: DayBar[];
 };
@@ -228,8 +196,7 @@ export async function getFlashcardMetrics(
     return true;
   });
 
-  const stageDistribution: StageDistribution = { novo: 0, aprendendo: 0, revisao: 0, reaprendizagem: 0, suspenso: 0 };
-  let consolidatedCount = 0;
+  const stageDistribution: StageDistribution = { novo: 0, aprendendo: 0, revisao: 0, reaprendizagem: 0, consolidado: 0 };
   let overdueCount = 0;
   let dueTodayCount = 0;
   const todayKey = toLocalDateKey(new Date(), timeZone);
@@ -238,9 +205,8 @@ export async function getFlashcardMetrics(
 
   for (const row of filteredStates) {
     const suspended = Boolean(row.suspended_at);
-    const stage = deriveStageLabel(row.state as State, suspended);
+    const stage = deriveStageBreakdownLabel(row.state as State, row.stability, suspended);
     stageDistribution[stage] += 1;
-    if (isConsolidated(row.state as State, row.stability, suspended)) consolidatedCount += 1;
     if (!suspended) {
       const dueAt = new Date(row.due_at);
       if (dueAt < startOfToday) overdueCount += 1;
@@ -259,7 +225,6 @@ export async function getFlashcardMetrics(
     retentionSampleCount: currentDedup.length,
     overdueCount,
     dueTodayCount: overdueCount + dueTodayCount,
-    consolidatedCount,
     stageDistribution,
     reviewsByDay,
   };

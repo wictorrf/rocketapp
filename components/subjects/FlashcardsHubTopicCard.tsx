@@ -31,7 +31,7 @@ export function FlashcardsHubTopicCard({ summary }: { summary: TopicHubSummary }
             {summary.overdueCount > 0 && (
               <span className="fc-hub-count overdue">{summary.overdueCount} atrasados</span>
             )}
-            {summary.dueTodayCount > 0 && <span className="fc-hub-count">{summary.dueTodayCount} hoje</span>}
+            {summary.dueTodayCount > 0 && <span className="fc-hub-count due-today">{summary.dueTodayCount} hoje</span>}
             {summary.newCount > 0 && <span className="fc-hub-count new">{summary.newCount} novos</span>}
             <span className="fc-hub-count muted">~{summary.estimatedMinutes} min</span>
           </div>
