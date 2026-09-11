@@ -79,6 +79,17 @@ function storedToCard(stored: StoredSrsState): Card {
   };
 }
 
+// Dias reais entre duas datas — usado pra formatar o intervalo exibido a
+// partir da data de vencimento de verdade (`card.due`), não de
+// `scheduled_days`: esse campo vem ZERADO do ts-fsrs sempre que o resultado
+// cai dentro de um passo de aprendizagem (<1 dia), guardando a precisão de
+// minutos só em `due` — formatar direto de `scheduled_days` fazia Esqueci/
+// Difícil/Bom (todos <1 dia nesse estágio) mostrarem o mesmo "1 min", mesmo
+// tendo `due` bem diferentes entre si (documento de checagem FSRS).
+export function daysBetween(from: Date, to: Date): number {
+  return (to.getTime() - from.getTime()) / 86_400_000;
+}
+
 export type GradePreview = {
   rating: Grade;
   scheduledDays: number;
@@ -91,7 +102,7 @@ export function previewGrades(stored: StoredSrsState, now: Date = new Date()): G
   const preview = scheduler.repeat(storedToCard(stored), now);
   return ([Rating.Again, Rating.Hard, Rating.Good, Rating.Easy] as Grade[]).map((rating) => {
     const { card: nextCard } = preview[rating];
-    return { rating, scheduledDays: nextCard.scheduled_days, intervalLabel: formatInterval(nextCard.scheduled_days) };
+    return { rating, scheduledDays: nextCard.scheduled_days, intervalLabel: formatInterval(daysBetween(now, nextCard.due)) };
   });
 }
 
@@ -112,7 +123,7 @@ export function applyGrade(stored: StoredSrsState, rating: Grade, now: Date = ne
     after: cardToStored(nextCard),
     rating,
     scheduledDays: nextCard.scheduled_days,
-    intervalLabel: formatInterval(nextCard.scheduled_days),
+    intervalLabel: formatInterval(daysBetween(now, nextCard.due)),
   };
 }
 
@@ -142,8 +153,12 @@ export function formatInterval(scheduledDays: number): string {
     if (minutes < 60) return `${minutes} min`;
     return `${Math.round(minutes / 60)} h`;
   }
-  if (scheduledDays < 2) return "1 dia";
-  if (scheduledDays < 30) return `${Math.round(scheduledDays)} dias`;
+  if (scheduledDays < 2) return "amanhã";
+  if (scheduledDays < 7) return `${Math.round(scheduledDays)} dias`;
+  if (scheduledDays < 30) {
+    const weeks = Math.round(scheduledDays / 7);
+    return weeks <= 1 ? "1 semana" : `${weeks} semanas`;
+  }
   if (scheduledDays < 365) {
     const months = Math.round(scheduledDays / 30);
     return months <= 1 ? "1 mês" : `${months} meses`;
@@ -181,6 +196,11 @@ export const STAGE_LABEL_PT: Record<StageLabel, string> = {
 // FSRS: cartão Em revisão com estabilidade de memória de 21 dias ou mais —
 // tempo considerado suficiente pra lembrança estar bem fixada. Essa é a
 // única regra que decide a categoria (documentada aqui conforme pedido).
+// Não é uma ação manual (não existe "consolidar cartão"): é 100% derivado a
+// cada leitura, e um cartão consolidado continua entrando normalmente nas
+// filas de revisão — não é arquivado nem excluído automaticamente, só some
+// da lista de pendências quando literalmente não há revisão devida (como
+// qualquer outro cartão em dia).
 const CONSOLIDATED_STABILITY_DAYS = 21;
 
 export function isConsolidated(state: State, stability: number, suspended: boolean): boolean {

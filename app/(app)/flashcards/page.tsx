@@ -16,7 +16,7 @@ export default async function FlashcardsHubPage() {
 
   const timeZone = await getUserTimezone();
   const [summaries, subjects, evolution, upcomingLoad, stageDistribution] = await Promise.all([
-    getFlashcardsHubSummary(profile.userId),
+    getFlashcardsHubSummary(profile.userId, timeZone),
     listActiveSubjectsWithTopics(profile.userId),
     getFlashcardReviewEvolution(profile.userId, timeZone),
     getUpcomingReviewLoad(profile.userId, timeZone),

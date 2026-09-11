@@ -70,8 +70,10 @@ export function RetentionCurve({ cards }: { cards: FlashcardWithState[] }) {
   return (
     <div>
       <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 14, lineHeight: 1.5 }}>
-        A curva se adapta ao seu desempenho. Cada ponto representa um flashcard, e o Rocket calcula
-        quando ele precisa aparecer novamente para manter sua retenção.
+        A curva se adapta ao seu desempenho. Cada ponto representa um flashcard, mostrando a
+        recuperabilidade estimada pelo FSRS — diferente da retenção observada (baseada no seu
+        histórico real de acertos) — e o Rocket usa essa estimativa pra calcular quando ele precisa
+        aparecer novamente.
       </p>
 
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width="100%" height={HEIGHT} role="img" aria-label="Curva de retenção do assunto">

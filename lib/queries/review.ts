@@ -9,6 +9,7 @@ import {
   retrievability,
   estimateReviewMinutes,
   formatInterval,
+  daysBetween,
   type Grade,
   type GradePreview,
   type StoredSrsState,
@@ -242,11 +243,12 @@ export type TopicHubSummary = {
 // assuntos ativos com pelo menos um cartão (não só os com pendência), pra
 // quem está em dia continuar aparecendo com esse status em vez de sumir da
 // lista. Uma única leitura em lote de flashcards+estado (sem N+1 por assunto).
-export async function getFlashcardsHubSummary(userId: string): Promise<TopicHubSummary[]> {
+export async function getFlashcardsHubSummary(userId: string, timeZone: string): Promise<TopicHubSummary[]> {
   const supabase = await createClient();
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const todayKey = toLocalDateKey(now, timeZone);
+  const startOfToday = startOfDayInTimeZone(todayKey, timeZone);
+  const endOfToday = new Date(startOfDayInTimeZone(addDaysToKey(todayKey, 1), timeZone).getTime() - 1);
 
   const [{ data: subjects }, { data: topics }, { data: flashcards }] = await Promise.all([
     supabase.from("subjects").select("id, name").eq("user_id", userId).is("archived_at", null),
@@ -362,7 +364,7 @@ export async function getFlashcardReviewHistory(flashcardId: string): Promise<Re
   const supabase = await createClient();
   const { data } = await supabase
     .from("review_logs")
-    .select("rating, reviewed_at, scheduled_days")
+    .select("rating, reviewed_at, due_after")
     .eq("flashcard_id", flashcardId)
     .order("reviewed_at", { ascending: false })
     .limit(REVIEW_HISTORY_LIMIT);
@@ -370,7 +372,10 @@ export async function getFlashcardReviewHistory(flashcardId: string): Promise<Re
   return (data ?? []).map((r) => ({
     rating: r.rating as Grade,
     reviewedAt: r.reviewed_at,
-    intervalLabel: formatInterval(r.scheduled_days),
+    // A partir das datas reais (não de scheduled_days, que o ts-fsrs zera
+    // durante passos de aprendizagem) — corrige retroativamente o histórico
+    // já salvo, sem precisar de migração de dados.
+    intervalLabel: formatInterval(daysBetween(new Date(r.reviewed_at), new Date(r.due_after))),
   }));
 }
 
