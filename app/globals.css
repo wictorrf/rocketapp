@@ -3668,20 +3668,83 @@ h2.section-title {
 }
 
 /* ---------- flashcard creation form ---------- */
-.fc-image-dropzone {
-  border-radius: var(--radius-md);
+.fc-image-slots {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.fc-image-slot {
+  flex: 1;
+  min-width: 160px;
+}
+.fc-image-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--ice);
+  cursor: pointer;
+  text-align: center;
+}
+.fc-image-add-btn:focus-visible {
+  outline: 2px solid var(--wine);
   outline-offset: 2px;
 }
-.fc-image-dropzone:focus-visible {
-  outline: 2px solid var(--wine);
+.fc-image-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  background: var(--white);
 }
-.fc-image-upload {
-  border: 1.5px dashed var(--line);
-  border-radius: var(--radius-md);
-  padding: 22px;
-  text-align: center;
+.fc-image-chip img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.fc-image-chip-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fc-image-chip-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.fc-image-chip-body input {
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  width: 100%;
+}
+.fc-image-chip-remove {
+  border: none;
+  background: none;
+  color: var(--text-muted);
   cursor: pointer;
-  background: var(--ice);
+  font-size: 14px;
+  padding: 4px;
+  flex-shrink: 0;
+}
+.fc-image-chip-remove:hover {
+  color: var(--wine);
 }
 .fc-form-actions {
   display: flex;
@@ -3781,19 +3844,6 @@ h2.section-title {
     position: static;
   }
 }
-.fc-image-upload img {
-  max-width: 100%;
-  max-height: 160px;
-  border-radius: 8px;
-}
-.fc-image-upload-hint {
-  display: block;
-  font-size: 12.5px;
-  margin-top: 6px;
-  color: var(--text-muted);
-  font-weight: 700;
-}
-
 /* ---------- editor de texto rico ---------- */
 .rte-field {
   margin-bottom: 18px;

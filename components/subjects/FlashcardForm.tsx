@@ -276,13 +276,13 @@ export function FlashcardForm({
     if (file) handleImageFile(file, side);
   }
 
-  function handleDrop(e: React.DragEvent<HTMLDivElement>, side: "front" | "back") {
+  function handleDrop(e: React.DragEvent<HTMLElement>, side: "front" | "back") {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file) handleImageFile(file, side);
   }
 
-  function handlePaste(e: React.ClipboardEvent<HTMLDivElement>, side: "front" | "back") {
+  function handlePaste(e: React.ClipboardEvent<HTMLElement>, side: "front" | "back") {
     const item = [...e.clipboardData.items].find((i) => i.type.startsWith("image/"));
     const file = item?.getAsFile();
     if (file) {
@@ -432,115 +432,108 @@ export function FlashcardForm({
             />
 
             <div className="field">
-              <label htmlFor="image">Imagem na frente (opcional)</label>
-              <div
-                className="fc-image-dropzone"
-                tabIndex={0}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(e, "front")}
-                onPaste={(e) => handlePaste(e, "front")}
-              >
-                <label className="fc-image-upload" htmlFor="image">
+              <label>Imagens (opcional)</label>
+              <div className="fc-image-slots">
+                <div className="fc-image-slot">
                   {imagePreview ? (
-                    <img src={imagePreview} alt="" />
-                  ) : (
-                    <div>
-                      <span style={{ fontSize: 22 }}>🖼️</span>
-                      <span className="fc-image-upload-hint">
-                        Clique, arraste ou cole (Ctrl+V) uma imagem, um ECG, uma radiografia
-                      </span>
+                    <div className="fc-image-chip">
+                      <img src={imagePreview} alt="" />
+                      <div className="fc-image-chip-body">
+                        <span className="fc-image-chip-label">Frente</span>
+                        <input
+                          ref={imageAltInputRef}
+                          type="text"
+                          name="imageAlt"
+                          placeholder="Texto alternativo"
+                          value={imageAlt}
+                          onChange={(e) => setImageAlt(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="fc-image-chip-remove"
+                        aria-label="Remover imagem da frente"
+                        onClick={() => {
+                          setImagePreview(null);
+                          setImageAlt("");
+                          setRemoveImage(true);
+                        }}
+                      >
+                        ✕
+                      </button>
                     </div>
+                  ) : (
+                    <label
+                      className="fc-image-add-btn"
+                      htmlFor="image"
+                      tabIndex={0}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => handleDrop(e, "front")}
+                      onPaste={(e) => handlePaste(e, "front")}
+                    >
+                      🖼️ Imagem na frente
+                    </label>
                   )}
-                </label>
-                <input
-                  id="image"
-                  name="image"
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={(e) => handleImageInputChange(e, "front")}
-                />
-              </div>
-              {imagePreview && (
-                <>
                   <input
-                    ref={imageAltInputRef}
-                    type="text"
-                    name="imageAlt"
-                    placeholder="Texto alternativo (descreva a imagem pra acessibilidade)"
-                    value={imageAlt}
-                    onChange={(e) => setImageAlt(e.target.value)}
-                    style={{ marginTop: 8 }}
+                    id="image"
+                    name="image"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => handleImageInputChange(e, "front")}
                   />
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    style={{ marginTop: 8 }}
-                    onClick={() => {
-                      setImagePreview(null);
-                      setImageAlt("");
-                      setRemoveImage(true);
-                    }}
-                  >
-                    Remover imagem
-                  </button>
-                </>
-              )}
-            </div>
+                </div>
 
-            <div className="field">
-              <label htmlFor="backImage">Imagem no verso (opcional)</label>
-              <div
-                className="fc-image-dropzone"
-                tabIndex={0}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(e, "back")}
-                onPaste={(e) => handlePaste(e, "back")}
-              >
-                <label className="fc-image-upload" htmlFor="backImage">
+                <div className="fc-image-slot">
                   {backImagePreview ? (
-                    <img src={backImagePreview} alt="" />
-                  ) : (
-                    <div>
-                      <span style={{ fontSize: 22 }}>🖼️</span>
-                      <span className="fc-image-upload-hint">Clique, arraste ou cole (Ctrl+V) uma imagem à resposta</span>
+                    <div className="fc-image-chip">
+                      <img src={backImagePreview} alt="" />
+                      <div className="fc-image-chip-body">
+                        <span className="fc-image-chip-label">Verso</span>
+                        <input
+                          ref={backImageAltInputRef}
+                          type="text"
+                          name="backImageAlt"
+                          placeholder="Texto alternativo"
+                          value={backImageAlt}
+                          onChange={(e) => setBackImageAlt(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="fc-image-chip-remove"
+                        aria-label="Remover imagem do verso"
+                        onClick={() => {
+                          setBackImagePreview(null);
+                          setBackImageAlt("");
+                          setRemoveBackImage(true);
+                        }}
+                      >
+                        ✕
+                      </button>
                     </div>
+                  ) : (
+                    <label
+                      className="fc-image-add-btn"
+                      htmlFor="backImage"
+                      tabIndex={0}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => handleDrop(e, "back")}
+                      onPaste={(e) => handlePaste(e, "back")}
+                    >
+                      🖼️ Imagem no verso
+                    </label>
                   )}
-                </label>
-                <input
-                  id="backImage"
-                  name="backImage"
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={(e) => handleImageInputChange(e, "back")}
-                />
-              </div>
-              {backImagePreview && (
-                <>
                   <input
-                    ref={backImageAltInputRef}
-                    type="text"
-                    name="backImageAlt"
-                    placeholder="Texto alternativo (descreva a imagem pra acessibilidade)"
-                    value={backImageAlt}
-                    onChange={(e) => setBackImageAlt(e.target.value)}
-                    style={{ marginTop: 8 }}
+                    id="backImage"
+                    name="backImage"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => handleImageInputChange(e, "back")}
                   />
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    style={{ marginTop: 8 }}
-                    onClick={() => {
-                      setBackImagePreview(null);
-                      setBackImageAlt("");
-                      setRemoveBackImage(true);
-                    }}
-                  >
-                    Remover imagem
-                  </button>
-                </>
-              )}
+                </div>
+              </div>
             </div>
 
             <div className="field">
