@@ -5,7 +5,6 @@ import {
   getFlashcardMetrics,
   getQuestionMetrics,
   getStudyTimeMetrics,
-  getFocusSuggestions,
   resolvePeriodRange,
   type MetricsPeriod,
   type MetricsFilters,
@@ -14,10 +13,9 @@ import { toLocalDateKey } from "@/lib/utils/format";
 import { getUserTimezone } from "@/lib/utils/timezone";
 import { PeriodSelector } from "@/components/metrics/PeriodSelector";
 import { MetricsFiltersBar } from "@/components/metrics/MetricsFiltersBar";
-import { FlashcardsSection } from "@/components/metrics/FlashcardsSection";
 import { QuestionsSection } from "@/components/metrics/QuestionsSection";
-import { StudyTimeSection } from "@/components/metrics/StudyTimeSection";
-import { FocusSuggestionsList } from "@/components/metrics/FocusSuggestionsList";
+import { StudyDistributionSection } from "@/components/metrics/StudyDistributionSection";
+import { FlashcardsSection } from "@/components/metrics/FlashcardsSection";
 
 const VALID_PERIODS: MetricsPeriod[] = ["week", "month", "year", "all"];
 
@@ -45,32 +43,39 @@ export default async function MetricsPage({ searchParams }: PageProps<"/metrics"
 
   const range = resolvePeriodRange(period, { year, month, weekDateKey });
 
-  const [filterOptions, flashcardMetrics, questionMetrics, studyTimeMetrics, focusSuggestions] = await Promise.all([
+  const [filterOptions, flashcardMetrics, questionMetrics, studyTimeMetrics] = await Promise.all([
     getMetricsFilterOptions(profile.userId),
     getFlashcardMetrics(profile.userId, period, range, timeZone, filters),
     getQuestionMetrics(profile.userId, period, range, filters),
     getStudyTimeMetrics(profile.userId, period, range, filters),
-    getFocusSuggestions(profile.userId, range, timeZone, filters),
   ]);
 
-  const focusTitle = period === "week" ? "Onde focar esta semana" : period === "month" ? "Onde focar este mês" : period === "year" ? "Onde focar este ano" : "Onde focar";
-
   return (
-    <div>
+    <div className="metrics-page">
       <h2 className="section-title">Métricas</h2>
+      <p className="muted-note">Transforme sua rotina em dados e seus dados em evolução.</p>
 
-      <PeriodSelector period={period} hasExplicitPeriod={hasExplicitPeriod} year={year} month={month} weekDateKey={weekDateKey} rangeLabel={range.rangeLabel} />
+      <PeriodSelector
+        period={period}
+        hasExplicitPeriod={hasExplicitPeriod}
+        year={year}
+        month={month}
+        weekDateKey={weekDateKey}
+        rangeLabel={range.rangeLabel}
+        showTodayShortcut={false}
+        inline
+      />
       <MetricsFiltersBar subjects={filterOptions} subjectId={filters.subjectId} topicId={filters.topicId} activityType={filters.activityType} />
 
-      <FlashcardsSection metrics={flashcardMetrics} />
-      <div style={{ height: 28 }} />
       <QuestionsSection metrics={questionMetrics} />
       <div style={{ height: 28 }} />
-      <StudyTimeSection metrics={studyTimeMetrics} />
-
+      <StudyDistributionSection metrics={studyTimeMetrics} />
       <div style={{ height: 28 }} />
-      <h2 className="section-title">{focusTitle}</h2>
-      <FocusSuggestionsList suggestions={focusSuggestions} />
+      <FlashcardsSection metrics={flashcardMetrics} />
+
+      <p className="muted-note" style={{ textAlign: "center", marginTop: 32 }}>
+        Quando você entende seus dados, fica mais fácil enxergar seu progresso e escolher melhor onde colocar sua energia.
+      </p>
     </div>
   );
 }

@@ -46,7 +46,8 @@
    cobre. */
 .dashboard-page,
 .calendar-page,
-.subjects-page {
+.subjects-page,
+.metrics-page {
   --font-display: var(--font-nunito-sans), sans-serif;
   --font-body: var(--font-nunito-sans), sans-serif;
   --font-mono: var(--font-nunito-sans), sans-serif;
@@ -2775,32 +2776,110 @@ h2.section-title {
   padding: 30px 0;
   text-align: center;
 }
-.focus-suggestions {
+/* ---------- gráfico combinado de questões (barra + linha) ---------- */
+.combo-legend {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 10px;
+}
+.combo-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.combo-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.combo-legend-dot.line {
+  border-radius: 50%;
+}
+
+/* ---------- donut de distribuição + barras horizontais (Métricas) ---------- */
+.pie-chart.donut {
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%);
+  mask: radial-gradient(circle, transparent 58%, #000 59%);
+}
+.pie-legend button.pl-item {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+.pie-legend button.pl-item.active {
+  background: var(--ice);
+}
+.donut-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--ice);
+}
+.donut-detail .sw {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.donut-detail strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+.donut-detail span {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.hbar-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.focus-suggestion-card {
-  display: flex;
-  gap: 14px;
-  padding: 16px 18px;
-  border-radius: var(--radius-sm);
-  background: var(--ice);
+.hbar-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 30%) 1fr auto;
+  align-items: center;
+  gap: 12px;
 }
-.focus-suggestion-reason {
-  font-size: 13.5px;
-  line-height: 1.5;
-  margin-bottom: 10px;
+.hbar-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.focus-suggestion-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
+.hbar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--ice-dim);
+  overflow: hidden;
 }
-.focus-suggestion-actions a {
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--wine);
+.hbar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+.hbar-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 12.5px;
+  white-space: nowrap;
 }
 
 @media (max-width: 900px) {

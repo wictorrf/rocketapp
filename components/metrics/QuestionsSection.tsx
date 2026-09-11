@@ -1,41 +1,29 @@
-import Link from "next/link";
 import type { QuestionMetrics } from "@/lib/queries/metrics";
 import { ComparisonBadge } from "./ComparisonBadge";
-import { EvolutionChart } from "./EvolutionChart";
+import { QuestionEvolutionChart } from "./QuestionEvolutionChart";
 
 export function QuestionsSection({ metrics }: { metrics: QuestionMetrics }) {
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <h2 className="section-title">Questões registradas</h2>
-        <Link href="/subjects" className="btn btn-ghost btn-sm">
-          Ver registros
-        </Link>
-      </div>
-      <div className="grid cols-3" style={{ marginBottom: 20 }}>
-        <div className="card">
-          <div className="eyebrow">Questões respondidas</div>
-          <div className="stat-num">{metrics.respondedCount}</div>
-          <div className="stat-label">
-            <ComparisonBadge comparison={metrics.respondedComparison} />
-          </div>
+      <h2 className="section-title">Questões registradas</h2>
+      <div className="sd-summary" style={{ marginBottom: 20 }}>
+        <div className="sd-sum-item">
+          <span>Questões respondidas</span>
+          <b>{metrics.respondedCount}</b>
+          <ComparisonBadge comparison={metrics.respondedComparison} />
         </div>
-        <div className="card">
-          <div className="eyebrow">Acertos</div>
-          <div className="stat-num">{metrics.correctCount}</div>
+        <div className="sd-sum-item">
+          <span>Acertos</span>
+          <b>{metrics.correctCount}</b>
         </div>
-        <div className="card">
-          <div className="eyebrow">Porcentagem de acertos</div>
+        <div className="sd-sum-item">
+          <span>Aproveitamento</span>
           {metrics.accuracyPct === null ? (
-            <div className="stat-num" style={{ fontSize: 20 }}>
-              Ainda sem dados suficientes
-            </div>
+            <b style={{ fontSize: 14 }}>Ainda sem dados suficientes</b>
           ) : (
             <>
-              <div className="stat-num">{metrics.accuracyPct}%</div>
-              <div className="stat-label">
-                <ComparisonBadge comparison={metrics.accuracyComparison} />
-              </div>
+              <b>{metrics.accuracyPct}%</b>
+              <ComparisonBadge comparison={metrics.accuracyComparison} />
             </>
           )}
         </div>
@@ -43,7 +31,7 @@ export function QuestionsSection({ metrics }: { metrics: QuestionMetrics }) {
 
       <div className="card">
         <h3 className="card-subtitle">Evolução das questões</h3>
-        <EvolutionChart data={metrics.evolution} emptyLabel="Nenhuma questão registrada neste período." />
+        <QuestionEvolutionChart data={metrics.evolution} emptyLabel="Nenhuma questão registrada neste período." />
       </div>
     </>
   );

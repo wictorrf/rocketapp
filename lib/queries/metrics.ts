@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { State, deriveStageLabel, isConsolidated, type StageLabel } from "@/lib/srs/fsrs";
-import { toLocalDateKey, dateKeyToUtcDate, addDaysToKey } from "@/lib/utils/format";
+import { toLocalDateKey, addDaysToKey } from "@/lib/utils/format";
 import { startOfDayInTimeZone } from "@/lib/utils/timezone";
 import { activityTypeLabel, ACTIVITY_TYPES } from "@/lib/timer/pomodoro";
 import { QUESTION_LOG_TYPE_LABEL, type QuestionLogType } from "@/lib/constants/question-log-types";
@@ -72,22 +72,37 @@ function bucketDates(dates: string[], range: PeriodRange, granularity: "day" | "
   return [...map.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([key, value]) => ({ key, label: bucketLabel(key, granularity), value }));
 }
 
-function bucketMinutes(rows: { started_at: string; minutes: number }[], range: PeriodRange, granularity: "day" | "month"): DayBar[] {
-  const map = new Map<string, number>();
+export type QuestionEvolutionPoint = { key: string; label: string; done: number; accuracyPct: number | null };
+
+// Igual ao zero-fill de bucketDates, mas soma questions_done/questions_correct
+// por balde e já deriva o aproveitamento do balde (não dá pra tirar isso de
+// bucketDates, que só conta ocorrências) — alimenta o gráfico combinado
+// barra (quantidade) + linha (% de acertos) das Métricas.
+function bucketQuestions(
+  rows: { questions_done: number; questions_correct: number; logged_at: string }[],
+  range: PeriodRange,
+  granularity: "day" | "month",
+): QuestionEvolutionPoint[] {
+  const map = new Map<string, { done: number; correct: number }>();
   if (range.start) {
     const cursor = new Date(range.start);
     if (granularity === "month") cursor.setDate(1);
     while (cursor < range.end) {
-      map.set(evolutionBucketKey(cursor.toISOString(), granularity), 0);
+      map.set(evolutionBucketKey(cursor.toISOString(), granularity), { done: 0, correct: 0 });
       if (granularity === "month") cursor.setMonth(cursor.getMonth() + 1);
       else cursor.setDate(cursor.getDate() + 1);
     }
   }
   for (const r of rows) {
-    const key = evolutionBucketKey(r.started_at, granularity);
-    map.set(key, (map.get(key) ?? 0) + r.minutes);
+    const key = evolutionBucketKey(r.logged_at, granularity);
+    const cur = map.get(key) ?? { done: 0, correct: 0 };
+    cur.done += r.questions_done;
+    cur.correct += r.questions_correct;
+    map.set(key, cur);
   }
-  return [...map.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([key, value]) => ({ key, label: bucketLabel(key, granularity), value }));
+  return [...map.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([key, v]) => ({ key, label: bucketLabel(key, granularity), done: v.done, accuracyPct: weightedAccuracyPct(v.correct, v.done) }));
 }
 
 // ---------- Disciplinas/assuntos ativos, pros seletores de filtro ----------
@@ -257,7 +272,7 @@ export type QuestionMetrics = {
   correctCount: number;
   accuracyPct: number | null;
   accuracyComparison: Comparison;
-  evolution: DayBar[];
+  evolution: QuestionEvolutionPoint[];
 };
 
 async function questionLogsInRange(
@@ -306,7 +321,7 @@ export async function getQuestionMetrics(
   }
 
   const granularity = granularityFor(period);
-  const evolution = bucketDates(current.map((r) => r.logged_at), range, granularity);
+  const evolution = bucketQuestions(current, range, granularity);
 
   return {
     respondedCount: done,
@@ -319,15 +334,14 @@ export async function getQuestionMetrics(
 }
 
 // ---------- Tempo de estudo ----------
-export type PieSlice = { key: string; label: string; minutes: number; pct: number; color: string; sessionsCount: number };
+export type TimeSlice = { key: string; label: string; minutes: number; pct: number; color: string; sessionsCount: number };
 
 export type StudyTimeMetrics = {
   netMinutes: number;
   netMinutesComparison: Comparison;
   sessionsCount: number;
-  evolution: DayBar[];
-  bySubject: PieSlice[];
-  byActivity: PieSlice[];
+  bySubject: TimeSlice[];
+  byActivity: TimeSlice[];
 };
 
 type FocusRow = {
@@ -362,6 +376,13 @@ async function fetchFinishedSessions(
 
 const PIE_PALETTE = ["#68162E", "#E1648C", "#D8952C", "#4D9A68", "#4C86C6", "#8659A6", "#E17B5D", "#98A2B3"];
 
+// Cor fixa por tipo de atividade (exceto "outro", cujos rótulos são livres e
+// entram um a um na paleta por índice) — sem isso, a cor de "Revisão" mudava
+// de um período pro outro conforme quais tipos apareciam nos dados.
+const ACTIVITY_COLOR: Record<string, string> = Object.fromEntries(
+  ACTIVITY_TYPES.filter((a) => a.value !== "outro").map((a, i) => [a.value, PIE_PALETTE[i % PIE_PALETTE.length]]),
+);
+
 export async function getStudyTimeMetrics(
   userId: string,
   period: MetricsPeriod,
@@ -380,13 +401,6 @@ export async function getStudyTimeMetrics(
   const netMinutes = currentRows.reduce((sum, r) => sum + (r.actual_minutes ?? 0), 0);
   const prevNetMinutes = previousRows ? previousRows.reduce((sum, r) => sum + (r.actual_minutes ?? 0), 0) : null;
 
-  const granularity = granularityFor(period);
-  const evolution = bucketMinutes(
-    currentRows.map((r) => ({ started_at: r.started_at, minutes: r.actual_minutes ?? 0 })),
-    range,
-    granularity,
-  );
-
   // Pizza 1: por disciplina (usa a cor cadastrada da própria disciplina).
   const subjectIds = [...new Set(currentRows.map((r) => r.subject_id).filter((v): v is string => Boolean(v)))];
   const { data: subjectRows } = subjectIds.length
@@ -402,7 +416,7 @@ export async function getStudyTimeMetrics(
     bySubjectMap.set(r.subject_id, cur);
   }
   const bySubjectTotal = [...bySubjectMap.values()].reduce((s, v) => s + v.minutes, 0);
-  const bySubject: PieSlice[] = [...bySubjectMap.entries()]
+  const bySubject: TimeSlice[] = [...bySubjectMap.entries()]
     .sort(([, a], [, b]) => b.minutes - a.minutes)
     .map(([subjectId, v], i) => ({
       key: subjectId,
@@ -423,7 +437,7 @@ export async function getStudyTimeMetrics(
     byActivityMap.set(key, cur);
   }
   const byActivityTotal = [...byActivityMap.values()].reduce((s, v) => s + v.minutes, 0);
-  const byActivity: PieSlice[] = [...byActivityMap.entries()]
+  const byActivity: TimeSlice[] = [...byActivityMap.entries()]
     .sort(([, a], [, b]) => b.minutes - a.minutes)
     .map(([key, v], i) => {
       const [base, custom] = key.split(":");
@@ -432,7 +446,7 @@ export async function getStudyTimeMetrics(
         label: custom ?? activityTypeLabel(base, null),
         minutes: v.minutes,
         pct: byActivityTotal ? Math.round((v.minutes / byActivityTotal) * 100) : 0,
-        color: PIE_PALETTE[(ACTIVITY_TYPES.findIndex((a) => a.value === base) + i) % PIE_PALETTE.length] ?? PIE_PALETTE[i % PIE_PALETTE.length],
+        color: ACTIVITY_COLOR[base] ?? PIE_PALETTE[i % PIE_PALETTE.length],
         sessionsCount: v.sessions,
       };
     });
@@ -441,168 +455,9 @@ export async function getStudyTimeMetrics(
     netMinutes,
     netMinutesComparison: previousRows ? compareToPrevious(netMinutes, prevNetMinutes) : null,
     sessionsCount: currentRows.length,
-    evolution,
     bySubject,
     byActivity,
   };
-}
-
-// ---------- Onde focar ----------
-export type FocusSuggestion = {
-  topicId: string;
-  topicName: string;
-  subjectId: string;
-  subjectName: string;
-  reason: string;
-};
-
-// Amostras mínimas pra cada sinal — decisão de produto (documentada aqui,
-// conforme o requisito pede) pra evitar recomendações baseadas em pouquíssimos
-// registros.
-const MIN_QUESTIONS_SAMPLE = 5;
-const MIN_RETENTION_SAMPLE = 5;
-const MIN_OVERDUE_SAMPLE = 3;
-const MIN_ACTIVE_CARDS_FOR_DIFFICULTY = 5;
-const LOW_ACCURACY_THRESHOLD = 70;
-const LOW_RETENTION_THRESHOLD = 75;
-const HIGH_DIFFICULTY_THRESHOLD = 6.5;
-const EXAM_SOON_DAYS = 14;
-const LOW_STUDY_MINUTES_BEFORE_EXAM = 60;
-
-export async function getFocusSuggestions(
-  userId: string,
-  range: PeriodRange,
-  timeZone: string,
-  filters: MetricsFilters = EMPTY_FILTERS,
-): Promise<FocusSuggestion[]> {
-  const supabase = await createClient();
-  const { startIso, endIso } = isoRangeOf(range.start, range.end);
-
-  const { data: topics } = await supabase
-    .from("topics")
-    .select("id, name, subject_id, subjects!inner(name, user_id, archived_at)")
-    .eq("subjects.user_id", userId)
-    .is("subjects.archived_at", null)
-    .is("archived_at", null);
-  const topicRows = (topics ?? []).filter((t) => {
-    if (filters.topicId) return t.id === filters.topicId;
-    if (filters.subjectId) return t.subject_id === filters.subjectId;
-    return true;
-  });
-  if (topicRows.length === 0) return [];
-  const topicIds = topicRows.map((t) => t.id);
-  const topicNameById = new Map(topicRows.map((t) => [t.id, t.name]));
-  const subjectOf = new Map(
-    topicRows.map((t) => [t.id, { id: t.subject_id, name: (Array.isArray(t.subjects) ? t.subjects[0] : t.subjects)?.name ?? "" }]),
-  );
-
-  const todayKey = toLocalDateKey(new Date(), timeZone);
-
-  const [{ data: qLogs }, { data: flashcards }, { data: examTasks }] = await Promise.all([
-    (() => {
-      let q = supabase.from("question_logs").select("topic_id, questions_done, questions_correct, logged_at").eq("user_id", userId).in("topic_id", topicIds);
-      if (startIso) q = q.gte("logged_at", startIso);
-      if (endIso) q = q.lt("logged_at", endIso);
-      return q;
-    })(),
-    supabase.from("flashcards").select("id, topic_id").eq("user_id", userId).in("topic_id", topicIds),
-    supabase
-      .from("calendar_tasks")
-      .select("topic_id, subject_id, scheduled_date")
-      .eq("user_id", userId)
-      .eq("type", "prova")
-      .eq("status", "pending")
-      .gte("scheduled_date", todayKey),
-  ]);
-
-  const flashcardIds = (flashcards ?? []).map((f) => f.id);
-  const topicByFlashcard = new Map((flashcards ?? []).map((f) => [f.id, f.topic_id]));
-
-  const { data: reviewLogs } = flashcardIds.length
-    ? await (async () => {
-        let q = supabase.from("review_logs").select("flashcard_id, rating, reviewed_at").eq("user_id", userId).in("flashcard_id", flashcardIds);
-        if (startIso) q = q.gte("reviewed_at", startIso);
-        if (endIso) q = q.lt("reviewed_at", endIso);
-        return q;
-      })()
-    : { data: [] };
-
-  const { data: srsStates } = flashcardIds.length
-    ? await supabase.from("flashcard_srs_state").select("flashcard_id, due_at, difficulty, suspended_at").in("flashcard_id", flashcardIds)
-    : { data: [] };
-
-  const examDaysByTopic = new Map<string, number>();
-  for (const exam of examTasks ?? []) {
-    const tId = exam.topic_id;
-    if (!tId || !topicIds.includes(tId)) continue;
-    const days = Math.round((dateKeyToUtcDate(exam.scheduled_date).getTime() - dateKeyToUtcDate(todayKey).getTime()) / 86_400_000);
-    if (days <= EXAM_SOON_DAYS && (!examDaysByTopic.has(tId) || days < examDaysByTopic.get(tId)!)) examDaysByTopic.set(tId, days);
-  }
-
-  const { data: studyRows } = await (async () => {
-    let q = supabase.from("focus_sessions").select("topic_id, actual_minutes").eq("user_id", userId).not("ended_at", "is", null).in("topic_id", topicIds);
-    if (startIso) q = q.gte("started_at", startIso);
-    if (endIso) q = q.lt("started_at", endIso);
-    return q;
-  })();
-  const studyMinutesByTopic = new Map<string, number>();
-  for (const r of studyRows ?? []) {
-    if (!r.topic_id) continue;
-    studyMinutesByTopic.set(r.topic_id, (studyMinutesByTopic.get(r.topic_id) ?? 0) + (r.actual_minutes ?? 0));
-  }
-
-  const suggestions: FocusSuggestion[] = [];
-  for (const topicId of topicIds) {
-    const reasons: string[] = [];
-
-    const qForTopic = (qLogs ?? []).filter((l) => l.topic_id === topicId);
-    const qDone = qForTopic.reduce((s, l) => s + l.questions_done, 0);
-    const qCorrect = qForTopic.reduce((s, l) => s + l.questions_correct, 0);
-    if (qDone >= MIN_QUESTIONS_SAMPLE) {
-      const pct = weightedAccuracyPct(qCorrect, qDone)!;
-      if (pct < LOW_ACCURACY_THRESHOLD) reasons.push(`sua porcentagem de acertos foi de ${pct}% em ${qDone} questões`);
-    }
-
-    const reviewsForTopic = (reviewLogs ?? []).filter((r) => topicByFlashcard.get(r.flashcard_id) === topicId);
-    const dedup = firstReviewPerCardPerDay(reviewsForTopic, (r) => r.flashcard_id, (r) => r.reviewed_at);
-    if (dedup.length >= MIN_RETENTION_SAMPLE) {
-      const remembered = dedup.filter((r) => isRemembered(r.rating)).length;
-      const pct = weightedAccuracyPct(remembered, dedup.length)!;
-      if (pct < LOW_RETENTION_THRESHOLD) reasons.push(`sua retenção observada foi de ${pct}%`);
-    }
-
-    const statesForTopic = (srsStates ?? []).filter((s) => topicByFlashcard.get(s.flashcard_id) === topicId && !s.suspended_at);
-    const overdue = statesForTopic.filter((s) => new Date(s.due_at) < new Date()).length;
-    if (overdue >= MIN_OVERDUE_SAMPLE) reasons.push(`existem ${overdue} flashcards atrasados`);
-
-    if (statesForTopic.length >= MIN_ACTIVE_CARDS_FOR_DIFFICULTY) {
-      const avgDifficulty = statesForTopic.reduce((s, r) => s + r.difficulty, 0) / statesForTopic.length;
-      if (avgDifficulty >= HIGH_DIFFICULTY_THRESHOLD) reasons.push("seus flashcards têm dificuldade recorrente");
-    }
-
-    if (examDaysByTopic.has(topicId)) {
-      const days = examDaysByTopic.get(topicId)!;
-      const minutes = studyMinutesByTopic.get(topicId) ?? 0;
-      if (minutes < LOW_STUDY_MINUTES_BEFORE_EXAM) {
-        reasons.push(`há uma prova em ${days <= 0 ? "breve" : `${days} dias`} e pouco tempo dedicado até agora`);
-      }
-    }
-
-    if (reasons.length === 0) continue;
-    const subject = subjectOf.get(topicId);
-    if (!subject) continue;
-    const topicName = topicNameById.get(topicId) ?? "";
-    const reasonText = reasons.length === 1 ? reasons[0] : `${reasons.slice(0, -1).join(", ")} e ${reasons[reasons.length - 1]}`;
-    suggestions.push({
-      topicId,
-      topicName,
-      subjectId: subject.id,
-      subjectName: subject.name,
-      reason: `${topicName} merece atenção porque ${reasonText}.`,
-    });
-  }
-
-  return suggestions.sort((a, b) => b.reason.length - a.reason.length).slice(0, 6);
 }
 
 // ---------- Registros de questões, pro filtro "tipo de registro" ----------
