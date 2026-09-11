@@ -53,7 +53,9 @@ export default async function MetricsPage({ searchParams }: PageProps<"/metrics"
   return (
     <div className="metrics-page">
       <h2 className="section-title">Métricas</h2>
-      <p className="muted-note">Transforme sua rotina em dados e seus dados em evolução.</p>
+      <p className="muted-note" style={{ marginBottom: 18 }}>
+        Transforme sua rotina em dados e seus dados em evolução.
+      </p>
 
       <PeriodSelector
         period={period}
