@@ -3695,6 +3695,10 @@ h2.section-title {
 
 /* ---------- Editor de flashcard: tela cheia, duas colunas ---------- */
 .fc-editor-page {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  overflow-y: auto;
   min-height: 100vh;
   background: var(--ice);
   padding: 28px clamp(20px, 5vw, 56px) 60px;
