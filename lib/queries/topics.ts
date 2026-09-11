@@ -17,7 +17,8 @@ export type TopicSortKey =
   | "last_activity"
   | "studied_minutes"
   | "flashcard_count"
-  | "pending_reviews";
+  | "pending_reviews"
+  | "manual";
 
 export type TopicRecord = {
   id: string;
@@ -31,6 +32,7 @@ export type TopicRecord = {
 
 export type TopicSummary = TopicRecord & {
   createdAt: string;
+  sortOrder: number;
   totalFlashcards: number;
   pendingReviewsCount: number;
   questionsAccuracyPct: number | null;
@@ -55,7 +57,7 @@ export async function listTopicsForSubject(
 
   let topicsQuery = supabase
     .from("topics")
-    .select("id, name, emoji, color, tags, note, archived_at, created_at")
+    .select("id, name, emoji, color, tags, note, archived_at, created_at, sort_order")
     .eq("subject_id", subjectId);
   if (status === "active" || status === "pending" || status === "with_questions") {
     topicsQuery = topicsQuery.is("archived_at", null);
@@ -132,6 +134,7 @@ export async function listTopicsForSubject(
       note: topic.note,
       archivedAt: topic.archived_at,
       createdAt: topic.created_at,
+      sortOrder: topic.sort_order,
       totalFlashcards: ids.length,
       pendingReviewsCount,
       questionsAccuracyPct: totalDone ? Math.round((totalCorrect / totalDone) * 100) : null,
@@ -167,6 +170,8 @@ export async function listTopicsForSubject(
         return b.totalFlashcards - a.totalFlashcards;
       case "pending_reviews":
         return b.pendingReviewsCount - a.pendingReviewsCount;
+      case "manual":
+        return a.sortOrder - b.sortOrder;
       default:
         return a.name.localeCompare(b.name, "pt-BR");
     }

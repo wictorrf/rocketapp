@@ -74,7 +74,7 @@ export function RetentionCurve({ cards }: { cards: FlashcardWithState[] }) {
         quando ele precisa aparecer novamente para manter sua retenção.
       </p>
 
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width="100%" height={HEIGHT} role="img" aria-label="Curva de retenção deste assunto">
+      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width="100%" height={HEIGHT} role="img" aria-label="Curva de retenção do assunto">
         <line
           x1={PAD_X}
           y1={targetY}

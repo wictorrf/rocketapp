@@ -12,7 +12,15 @@ import { getContrastText } from "@/lib/constants/entity-colors";
 import { formatRelativeDays, formatHours } from "@/lib/utils/format";
 import type { TopicSummary } from "@/lib/queries/topics";
 
-export function TopicCard({ subjectId, topic }: { subjectId: string; topic: TopicSummary }) {
+export function TopicCard({
+  subjectId,
+  topic,
+  dragHandle,
+}: {
+  subjectId: string;
+  topic: TopicSummary;
+  dragHandle?: React.ReactNode;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [moving, setMoving] = useState(false);
@@ -33,6 +41,7 @@ export function TopicCard({ subjectId, topic }: { subjectId: string; topic: Topi
 
   return (
     <div className="subject-row">
+      {dragHandle}
       <Link href={`/subjects/${subjectId}/topics/${topic.id}`} className="subject-row-link">
         <div className="subject-icon" style={{ background: color, color: getContrastText(color) }}>
           {topic.emoji ?? "📖"}

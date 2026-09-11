@@ -282,3 +282,25 @@ export async function checkTopicNameInSubjectAction(subjectId: string, name: str
   return checkTopicNameExists(subjectId, name);
 }
 
+// Ordenação manual (drag-and-drop) dos assuntos de uma disciplina — grava a
+// posição de cada um conforme o índice no array já reordenado pela UI. Sem
+// criticidade de concorrência (ao contrário de grade_flashcard), então
+// atualizações em paralelo bastam, sem RPC/transação.
+export async function reorderTopicsAction(subjectId: string, orderedTopicIds: string[]): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const results = await Promise.all(
+    orderedTopicIds.map((topicId, index) =>
+      supabase.from("topics").update({ sort_order: index }).eq("id", topicId).eq("subject_id", subjectId).eq("user_id", user.id),
+    ),
+  );
+  if (results.some((r) => r.error)) return { error: "Não foi possível salvar a nova ordem." };
+
+  revalidatePath(`/subjects/${subjectId}/topics`);
+  return { error: null };
+}
+

@@ -17,7 +17,7 @@ const DUE_BUCKET_OPTIONS: { value: DueBucket; label: string }[] = [
   { value: "suspensos", label: "Suspensos" },
 ];
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 function normalize(text: string) {
   return text
@@ -45,6 +45,8 @@ function dueBucketOf(card: FlashcardWithState, startOfToday: Date, endOfWeek: Da
 export function FlashcardSection({
   title,
   defaultOpen = true,
+  showCount = false,
+  pageSize = DEFAULT_PAGE_SIZE,
   emptyMessage,
   cards,
   subjectId,
@@ -53,6 +55,10 @@ export function FlashcardSection({
 }: {
   title: string;
   defaultOpen?: boolean;
+  // "Precisa de revisão" mostra a contagem no título ("· 19 cartões") —
+  // as outras seções (Consolidados, Todos os flashcards) não pedem isso.
+  showCount?: boolean;
+  pageSize?: number;
   emptyMessage: string;
   cards: FlashcardWithState[];
   subjectId: string;
@@ -62,7 +68,7 @@ export function FlashcardSection({
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [dueFilter, setDueFilter] = useState<DueBucket>("todas");
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [visibleCount, setVisibleCount] = useState(pageSize);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [imagesLoaded, setImagesLoaded] = useState(!lazySign);
   const [imagesLoading, setImagesLoading] = useState(false);
@@ -115,7 +121,10 @@ export function FlashcardSection({
   return (
     <details className="collapsible-section" open={defaultOpen} onToggle={handleToggle}>
       <summary>
-        <h2 className="section-title">{title}</h2>
+        <h2 className="section-title">
+          {title}
+          {showCount && <span className="muted-note"> · {cards.length} {cards.length === 1 ? "cartão" : "cartões"}</span>}
+        </h2>
       </summary>
       <div className="collapsible-body">
         {cards.length > 0 && (
@@ -127,7 +136,7 @@ export function FlashcardSection({
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setVisibleCount(PAGE_SIZE);
+                  setVisibleCount(pageSize);
                 }}
                 placeholder="Buscar flashcard..."
                 aria-label={`Buscar em ${title}`}
@@ -145,7 +154,7 @@ export function FlashcardSection({
                 value={tagFilter}
                 onChange={(e) => {
                   setTagFilter(e.target.value);
-                  setVisibleCount(PAGE_SIZE);
+                  setVisibleCount(pageSize);
                 }}
               >
                 <option value="">Todas as etiquetas</option>
@@ -162,7 +171,7 @@ export function FlashcardSection({
               value={dueFilter}
               onChange={(e) => {
                 setDueFilter(e.target.value as DueBucket);
-                setVisibleCount(PAGE_SIZE);
+                setVisibleCount(pageSize);
               }}
             >
               {DUE_BUCKET_OPTIONS.map((o) => (
@@ -192,7 +201,7 @@ export function FlashcardSection({
 
         {hasMore && (
           <div style={{ textAlign: "center", marginTop: 14 }}>
-            <button type="button" className="btn btn-ghost" onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}>
+            <button type="button" className="btn btn-ghost" onClick={() => setVisibleCount((n) => n + pageSize)}>
               Carregar mais ({filtered.length - visible.length} restantes)
             </button>
           </div>

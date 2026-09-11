@@ -55,8 +55,8 @@ export function SubjectFormPanel({
   if (!open) return null;
 
   return (
-    <div className="side-panel-overlay" onClick={requestClose}>
-      <div className="side-panel-box" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={requestClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-top">
           <h2>{mode === "edit" ? "Editar disciplina" : "Nova disciplina"}</h2>
           <button type="button" className="icon-btn" onClick={requestClose} aria-label="Fechar">
@@ -169,9 +169,14 @@ export function SubjectFormPanel({
 
           {state.error && <p className="error-text">{state.error}</p>}
 
-          <SubmitButton pendingText="Guardando..." className="btn btn-primary btn-block">
-            Guardar disciplina
-          </SubmitButton>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" className="btn btn-ghost" onClick={requestClose}>
+              Cancelar
+            </button>
+            <SubmitButton pendingText="Salvando..." className="btn btn-primary btn-block">
+              Salvar disciplina
+            </SubmitButton>
+          </div>
         </form>
       </div>
     </div>

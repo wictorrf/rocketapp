@@ -5,7 +5,7 @@ import { listTopicsForSubject, type TopicStatusFilter, type TopicSortKey } from 
 import { SubjectDetailHeader } from "@/components/subjects/SubjectDetailHeader";
 import { NewTopicButton } from "@/components/subjects/NewTopicButton";
 import { TopicFilters } from "@/components/subjects/TopicFilters";
-import { TopicCard } from "@/components/subjects/TopicCard";
+import { TopicList } from "@/components/subjects/TopicList";
 import { formatHours } from "@/lib/utils/format";
 
 const VALID_STATUS: TopicStatusFilter[] = ["all", "active", "archived", "pending", "with_questions"];
@@ -16,6 +16,7 @@ const VALID_SORT: TopicSortKey[] = [
   "studied_minutes",
   "flashcard_count",
   "pending_reviews",
+  "manual",
 ];
 
 export default async function SubjectTopicsPage({
@@ -53,7 +54,7 @@ export default async function SubjectTopicsPage({
     : null;
 
   return (
-    <div>
+    <div className="subjects-page">
       <SubjectDetailHeader subject={subject} />
 
       <div className="sd-summary" style={{ marginBottom: 18 }}>
@@ -101,9 +102,7 @@ export default async function SubjectTopicsPage({
         </div>
       )}
 
-      {topics.map((topic) => (
-        <TopicCard key={topic.id} subjectId={subjectId} topic={topic} />
-      ))}
+      <TopicList subjectId={subjectId} topics={topics} sort={sort} />
     </div>
   );
 }

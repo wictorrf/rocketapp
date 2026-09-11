@@ -5,7 +5,6 @@ import { getTopic, getTopicPanel } from "@/lib/queries/topics";
 import { getQuestionLogSummary } from "@/lib/queries/questions";
 import { getSignedUrls } from "@/lib/queries/storage";
 import { formatHours } from "@/lib/utils/format";
-import { FlashcardRow } from "@/components/subjects/FlashcardRow";
 import { FlashcardSection } from "@/components/subjects/FlashcardSection";
 import { NewQuestionLogButton } from "@/components/subjects/NewQuestionLogButton";
 import { QuestionLogList } from "@/components/subjects/QuestionLogList";
@@ -41,10 +40,13 @@ export default async function TopicDetailPage({
     backImageUrl: f.backImageUrl ? (signedUrls.get(f.backImageUrl) ?? null) : null,
   });
 
-  const questionSummary = activeTab === "questoes" ? await getQuestionLogSummary(topicId) : null;
+  // Buscado sempre (não só na aba Questões) — Questões respondidas e
+  // Aproveitamento em questões agora também aparecem na faixa principal da
+  // aba Flashcards.
+  const questionSummary = await getQuestionLogSummary(topicId);
 
   return (
-    <div>
+    <div className="subjects-page">
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
         <Link href={`/subjects/${subjectId}/topics`} className="icon-btn" aria-label="Voltar">
           ‹
@@ -76,33 +78,13 @@ export default async function TopicDetailPage({
               <span>Flashcards ativos</span>
               <b>{panel.totalFlashcards}</b>
             </div>
-            <div className="sd-sum-item">
-              <span>Revisados 1x+</span>
-              <b>{panel.reviewedAtLeastOnce}</b>
-            </div>
-            <div className="sd-sum-item">
-              <span>Novos</span>
-              <b style={{ color: "var(--wine)" }}>{panel.novoCount}</b>
-            </div>
-            <div className="sd-sum-item">
-              <span>Em aprendizagem</span>
-              <b style={{ color: "var(--amber)" }}>{panel.aprendendoCount}</b>
-            </div>
-            <div className="sd-sum-item">
-              <span>Em revisão</span>
-              <b style={{ color: "var(--green)" }}>{panel.revisaoCount}</b>
-            </div>
-            <div className="sd-sum-item">
-              <span>Em reaprendizagem</span>
-              <b style={{ color: "#6b5a9e" }}>{panel.reaprendizagemCount}</b>
-            </div>
-            <div className="sd-sum-item">
-              <span>Suspensos</span>
-              <b style={{ color: "var(--text-muted)" }}>{panel.suspensoCount}</b>
-            </div>
-            <div className="sd-sum-item">
-              <span>Atrasados</span>
-              <b style={{ color: "var(--wine-bright)" }}>{panel.atrasadosCount}</b>
+            <div className="sd-sum-item sd-next">
+              <span>Atrasados / Revisar hoje</span>
+              <b>
+                {panel.atrasadosCount + panel.dueTodayCount > 0
+                  ? `Hoje, ${panel.atrasadosCount + panel.dueTodayCount} cartões`
+                  : "Você está em dia com suas revisões"}
+              </b>
             </div>
             <div className="sd-sum-item">
               <span>Retenção observada</span>
@@ -113,22 +95,52 @@ export default async function TopicDetailPage({
               )}
             </div>
             <div className="sd-sum-item">
+              <span>Questões respondidas</span>
+              <b>{questionSummary.totalDone}</b>
+            </div>
+            <div className="sd-sum-item">
+              <span>Aproveitamento em questões</span>
+              <b>{questionSummary.accuracyPct !== null ? `${questionSummary.accuracyPct}%` : "—"}</b>
+            </div>
+            <div className="sd-sum-item">
               <span>Tempo dedicado</span>
               <b>{formatHours(panel.studiedMinutes)}</b>
             </div>
-            <div className="sd-sum-item sd-next">
-              <span>Revisar hoje</span>
-              <b>
-                {panel.atrasadosCount + panel.dueTodayCount > 0
-                  ? `Hoje, ${panel.atrasadosCount + panel.dueTodayCount} cartões`
-                  : "Você está em dia com suas revisões"}
-              </b>
-            </div>
           </div>
+
+          <details className="collapsible-section" style={{ marginBottom: 20 }}>
+            <summary style={{ fontSize: 13.5, color: "var(--text-muted)", fontWeight: 600 }}>Ver estágio dos cartões</summary>
+            <div className="collapsible-body sd-summary">
+              <div className="sd-sum-item">
+                <span>Revisados 1x+</span>
+                <b>{panel.reviewedAtLeastOnce}</b>
+              </div>
+              <div className="sd-sum-item">
+                <span>Novos</span>
+                <b style={{ color: "var(--wine)" }}>{panel.novoCount}</b>
+              </div>
+              <div className="sd-sum-item">
+                <span>Em aprendizagem</span>
+                <b style={{ color: "var(--amber)" }}>{panel.aprendendoCount}</b>
+              </div>
+              <div className="sd-sum-item">
+                <span>Em revisão</span>
+                <b style={{ color: "var(--green)" }}>{panel.revisaoCount}</b>
+              </div>
+              <div className="sd-sum-item">
+                <span>Em reaprendizagem</span>
+                <b style={{ color: "#6b5a9e" }}>{panel.reaprendizagemCount}</b>
+              </div>
+              <div className="sd-sum-item">
+                <span>Suspensos</span>
+                <b style={{ color: "var(--text-muted)" }}>{panel.suspensoCount}</b>
+              </div>
+            </div>
+          </details>
 
           {panel.totalFlashcards > 0 && (
             <div className="card ebbinghaus-card">
-              <h2 className="section-title">Curva de retenção deste assunto</h2>
+              <h2 className="section-title">Curva de retenção do assunto</h2>
               <RetentionCurve cards={panel.all} />
             </div>
           )}
@@ -151,17 +163,16 @@ export default async function TopicDetailPage({
             </Link>
           </div>
 
-          <h2 className="section-title">Precisa de revisão</h2>
-          <div className="fc-list" style={{ marginBottom: 28 }}>
-            {panel.needsReview.length === 0 && (
-              <div className="card" style={{ textAlign: "center", color: "var(--text-muted)" }}>
-                Nada pendente por aqui.
-              </div>
-            )}
-            {panel.needsReview.map((f) => (
-              <FlashcardRow key={f.id} subjectId={subjectId} topicId={topicId} card={withSignedUrl(f)} />
-            ))}
-          </div>
+          <FlashcardSection
+            title="Precisa de revisão"
+            showCount
+            defaultOpen={false}
+            pageSize={10}
+            emptyMessage="Nada pendente por aqui."
+            cards={panel.needsReview.map(withSignedUrl)}
+            subjectId={subjectId}
+            topicId={topicId}
+          />
 
           <FlashcardSection
             title="Consolidados"
@@ -186,15 +197,15 @@ export default async function TopicDetailPage({
           <div className="qz-summary">
             <div className="sd-sum-item card" style={{ flex: "unset", minWidth: 140 }}>
               <span>Questões feitas</span>
-              <b>{questionSummary?.totalDone ?? 0}</b>
+              <b>{questionSummary.totalDone}</b>
             </div>
             <div className="sd-sum-item card" style={{ flex: "unset", minWidth: 140 }}>
               <span>Acertos</span>
-              <b>{questionSummary?.totalCorrect ?? 0}</b>
+              <b>{questionSummary.totalCorrect}</b>
             </div>
             <div className="sd-sum-item card" style={{ flex: "unset", minWidth: 140 }}>
               <span>% de acerto</span>
-              <b>{questionSummary?.accuracyPct !== null ? `${questionSummary?.accuracyPct}%` : "—"}</b>
+              <b>{questionSummary.accuracyPct !== null ? `${questionSummary.accuracyPct}%` : "—"}</b>
             </div>
           </div>
 
@@ -202,7 +213,7 @@ export default async function TopicDetailPage({
             <NewQuestionLogButton subjectId={subjectId} topicId={topicId} />
           </div>
 
-          <QuestionLogList subjectId={subjectId} topicId={topicId} logs={questionSummary?.logs ?? []} />
+          <QuestionLogList subjectId={subjectId} topicId={topicId} logs={questionSummary.logs} />
         </>
       )}
     </div>

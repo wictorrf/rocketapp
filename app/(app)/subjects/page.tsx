@@ -34,11 +34,14 @@ export default async function SubjectsPage({ searchParams }: PageProps<"/subject
   const subjects = await listSubjectsWithSummary(profile.userId, { search: query, status, sort });
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-        <h2 className="section-title" style={{ margin: 0 }}>
-          Disciplinas
-        </h2>
+    <div className="subjects-page">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+        <div>
+          <h2 className="section-title" style={{ margin: 0 }}>
+            Disciplinas
+          </h2>
+          <p className="muted-note">Organize seus conteúdos e acompanhe sua evolução em cada matéria.</p>
+        </div>
         <NewSubjectButton />
       </div>
 

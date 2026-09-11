@@ -4,8 +4,9 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
-import { FlashcardPreview } from "./FlashcardPreview";
-import { createFlashcardAction, updateFlashcardAction, type FlashcardActionState } from "@/lib/actions/flashcards";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { FlashcardFlipView } from "./FlashcardFlipView";
+import { createFlashcardAction, updateFlashcardAction, deleteFlashcardAction, type FlashcardActionState } from "@/lib/actions/flashcards";
 import type { FlashcardForEdit } from "@/lib/queries/flashcards";
 import type { SubjectWithTopicsOption } from "@/lib/queries/subjects";
 
@@ -90,12 +91,15 @@ export function FlashcardForm({
   const [removeBackImage, setRemoveBackImage] = useState(false);
   const [confirmDuplicate, setConfirmDuplicate] = useState(false);
   const [editorResetKey, setEditorResetKey] = useState(0);
-  const [showPreview, setShowPreview] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
   const [draftBanner, setDraftBanner] = useState<Draft | null>(null);
+  const [mobileTab, setMobileTab] = useState<"editor" | "preview">("editor");
 
   const topics = useMemo(() => subjects.find((s) => s.id === subjectId)?.topics ?? [], [subjects, subjectId]);
   const topicName = topics.find((t) => t.id === topicId)?.name ?? "";
+  const subjectName = subjects.find((s) => s.id === subjectId)?.name ?? "";
 
   // Oferece restaurar um rascunho salvo (deste cartão, ou de "novo flashcard"
   // em modo criação) sempre que o painel abre — ajustado durante a
@@ -175,6 +179,15 @@ export function FlashcardForm({
     setRemoveBackImage(false);
     setEditorResetKey((k) => k + 1);
     setShowCloseConfirm(false);
+    onClose();
+  }
+
+  async function handleDelete() {
+    if (!flashcard) return;
+    setDeletePending(true);
+    await deleteFlashcardAction(flashcard.id, subjectId, topicId);
+    setDeletePending(false);
+    clearDraft(flashcard.id);
     onClose();
   }
 
@@ -283,50 +296,67 @@ export function FlashcardForm({
   const canSubmit = !isPending;
 
   return (
-    <>
-      <div className="side-panel-overlay" onClick={requestClose}>
-        <div className="side-panel-box" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-top">
-            <h2>
-              {isEdit ? "Editar flashcard" : "Novo flashcard"}
-              {topicName ? ` · ${topicName}` : ""}
-            </h2>
-            <button type="button" className="icon-btn" onClick={requestClose} aria-label="Fechar">
-              ✕
+    <div className="subjects-page fc-editor-page">
+      <div className="fc-editor-header">
+        <div>
+          <h2 className="section-title" style={{ marginBottom: 2 }}>
+            {isEdit ? "Editar flashcard" : "Novo flashcard"}
+          </h2>
+          {(subjectName || topicName) && (
+            <p className="muted-note">
+              {subjectName}
+              {subjectName && topicName ? " › " : ""}
+              {topicName}
+            </p>
+          )}
+        </div>
+        <button type="button" className="icon-btn" onClick={requestClose} aria-label="Fechar">
+          ✕
+        </button>
+      </div>
+
+      <div className="fc-editor-mobile-tabs">
+        <button type="button" className={mobileTab === "editor" ? "active" : ""} onClick={() => setMobileTab("editor")}>
+          Editar
+        </button>
+        <button type="button" className={mobileTab === "preview" ? "active" : ""} onClick={() => setMobileTab("preview")}>
+          Visualizar
+        </button>
+      </div>
+
+      {draftBanner && (
+        <div className="draft-banner">
+          <span>Você tem um rascunho salvo.</span>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={restoreDraft}>
+            Restaurar
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={dismissDraftBanner}>
+            Descartar
+          </button>
+        </div>
+      )}
+
+      {state.duplicate && !confirmDuplicate && (
+        <div className="duplicate-warning">
+          <p>
+            Já existe um cartão parecido nesse assunto: <b>“{state.duplicate.frontPreview}”</b>
+          </p>
+          <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+            <Link href={`/subjects/${subjectId}/topics/${topicId}/flashcards/${state.duplicate.id}/edit`} className="btn btn-ghost btn-sm">
+              Ver cartão existente
+            </Link>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => setConfirmDuplicate(true)}>
+              Continuar criação
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
+              Cancelar
             </button>
           </div>
+        </div>
+      )}
 
-          {draftBanner && (
-            <div className="draft-banner">
-              <span>Você tem um rascunho salvo.</span>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={restoreDraft}>
-                Restaurar
-              </button>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={dismissDraftBanner}>
-                Descartar
-              </button>
-            </div>
-          )}
-
-          {state.duplicate && !confirmDuplicate && (
-            <div className="duplicate-warning">
-              <p>
-                Já existe um cartão parecido nesse assunto: <b>“{state.duplicate.frontPreview}”</b>
-              </p>
-              <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-                <Link href={`/subjects/${subjectId}/topics/${topicId}/flashcards/${state.duplicate.id}/edit`} className="btn btn-ghost btn-sm">
-                  Ver cartão existente
-                </Link>
-                <button type="button" className="btn btn-primary btn-sm" onClick={() => setConfirmDuplicate(true)}>
-                  Continuar criação
-                </button>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          )}
-
+      <div className="fc-editor-grid" data-mobile-tab={mobileTab}>
+        <div className="fc-editor-col-left">
           <form
             action={(formData) => {
               hasSubmitted.current = true;
@@ -529,13 +559,21 @@ export function FlashcardForm({
             {state.error && <p className="error-text">{state.error}</p>}
 
             <div className="fc-form-actions">
+              {isEdit && (
+                <button type="button" className="btn btn-danger" disabled={!canSubmit} onClick={() => setShowDeleteConfirm(true)}>
+                  Excluir flashcard
+                </button>
+              )}
+              <button type="button" className="btn btn-ghost" onClick={requestClose}>
+                Cancelar
+              </button>
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={!canSubmit}
                 onClick={() => setKeepOpenAfterSave(false)}
               >
-                {isPending && !keepOpenAfterSave ? "Salvando..." : "Guardar flashcard"}
+                {isPending && !keepOpenAfterSave ? "Salvando..." : isEdit ? "Salvar alterações" : "Salvar flashcard"}
               </button>
               {!isEdit && (
                 <button
@@ -544,48 +582,60 @@ export function FlashcardForm({
                   disabled={!canSubmit}
                   onClick={() => setKeepOpenAfterSave(true)}
                 >
-                  {isPending && keepOpenAfterSave ? "Salvando..." : "Guardar e criar outro"}
+                  {isPending && keepOpenAfterSave ? "Salvando..." : "Salvar e criar outro"}
                 </button>
               )}
             </div>
-            <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => setShowPreview(true)}>
-              Pré-visualizar
-            </button>
           </form>
         </div>
 
-        {showCloseConfirm && (
-          <div className="modal-overlay" onClick={() => setShowCloseConfirm(false)}>
-            <div className="modal-box confirm-dialog" onClick={(e) => e.stopPropagation()}>
-              <h2>Alterações não salvas</h2>
-              <p className="confirm-dialog-body">Você tem alterações neste flashcard que ainda não foram guardadas.</p>
-              <div className="confirm-dialog-actions" style={{ flexWrap: "wrap" }}>
-                <button type="button" className="btn btn-ghost" onClick={() => setShowCloseConfirm(false)}>
-                  Continuar editando
-                </button>
-                <button type="button" className="btn btn-ghost" onClick={confirmDiscardAndClose}>
-                  Descartar alterações
-                </button>
-                <button type="button" className="btn btn-primary" onClick={confirmSaveDraftAndClose}>
-                  Guardar rascunho
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="fc-editor-col-right">
+          <div className="fc-editor-preview-label">Pré-visualização</div>
+          <FlashcardFlipView
+            front={frontHtml}
+            back={backHtml}
+            imageUrl={imagePreview}
+            imageAlt={imageAlt}
+            backImageUrl={backImagePreview}
+            backImageAlt={backImageAlt}
+          />
+          <p className="muted-note" style={{ textAlign: "center", marginTop: 14 }}>
+            É assim que o cartão vai aparecer numa sessão de revisão.
+          </p>
+        </div>
       </div>
 
-      {showPreview && (
-        <FlashcardPreview
-          front={frontHtml}
-          back={backHtml}
-          imageUrl={imagePreview}
-          imageAlt={imageAlt}
-          backImageUrl={backImagePreview}
-          backImageAlt={backImageAlt}
-          onClose={() => setShowPreview(false)}
+      {showCloseConfirm && (
+        <div className="modal-overlay" onClick={() => setShowCloseConfirm(false)}>
+          <div className="modal-box confirm-dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>Alterações não salvas</h2>
+            <p className="confirm-dialog-body">Você tem alterações neste flashcard que ainda não foram guardadas.</p>
+            <div className="confirm-dialog-actions" style={{ flexWrap: "wrap" }}>
+              <button type="button" className="btn btn-ghost" onClick={() => setShowCloseConfirm(false)}>
+                Continuar editando
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={confirmDiscardAndClose}>
+                Descartar alterações
+              </button>
+              <button type="button" className="btn btn-primary" onClick={confirmSaveDraftAndClose}>
+                Guardar rascunho
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title="Excluir flashcard"
+          description={<p>Este flashcard será retirado das filas de revisão. Essa ação não pode ser desfeita.</p>}
+          confirmLabel="Excluir flashcard"
+          danger
+          pending={deletePending}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
         />
       )}
-    </>
+    </div>
   );
 }

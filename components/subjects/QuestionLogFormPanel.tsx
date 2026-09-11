@@ -50,8 +50,8 @@ export function QuestionLogFormPanel({
   const defaultDate = initialValues ? toLocalDateKey(new Date(initialValues.loggedAt), timeZone) : toLocalDateKey(new Date(), timeZone);
 
   return (
-    <div className="side-panel-overlay" onClick={onClose}>
-      <div className="side-panel-box" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-top">
           <h2>{mode === "edit" ? "Editar registro" : "Registrar questões"}</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Fechar">
@@ -144,9 +144,14 @@ export function QuestionLogFormPanel({
 
           {state.error && <p className="error-text">{state.error}</p>}
 
-          <SubmitButton pendingText="Salvando..." className="btn btn-primary btn-block">
-            {mode === "edit" ? "Guardar alterações" : "Registrar"}
-          </SubmitButton>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>
+              Cancelar
+            </button>
+            <SubmitButton pendingText="Salvando..." className="btn btn-primary btn-block">
+              {mode === "edit" ? "Guardar alterações" : "Registrar"}
+            </SubmitButton>
+          </div>
         </form>
       </div>
     </div>
