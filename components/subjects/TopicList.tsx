@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TopicCard } from "./TopicCard";
 import { reorderTopicsAction } from "@/lib/actions/topics";
 import type { TopicSummary, TopicSortKey } from "@/lib/queries/topics";
 
-// Só entra em modo arrastar-e-soltar quando sort === "manual" — nos outros
-// modos a lista é computada (por nome, atividade etc.), então arrastar não
-// faz sentido e os cards aparecem sem alça.
+// Arrastar-e-soltar fica disponível em qualquer ordenação, não só na manual
+// — ao soltar um assunto em outra posição, a nova ordem é salva e o filtro
+// muda sozinho para "Ordem manual", já que é isso que passa a refletir o
+// que a pessoa está vendo na tela.
 export function TopicList({
   subjectId,
   topics,
@@ -19,6 +20,7 @@ export function TopicList({
   sort: TopicSortKey;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [ordered, setOrdered] = useState(topics);
   const [draggedId, setDraggedId] = useState<string | null>(null);
 
@@ -29,16 +31,6 @@ export function TopicList({
   if (topics !== prevTopics) {
     setPrevTopics(topics);
     setOrdered(topics);
-  }
-
-  if (sort !== "manual") {
-    return (
-      <>
-        {topics.map((topic) => (
-          <TopicCard key={topic.id} subjectId={subjectId} topic={topic} />
-        ))}
-      </>
-    );
   }
 
   function handleDrop(targetId: string) {
@@ -52,7 +44,16 @@ export function TopicList({
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
     setOrdered(next);
-    reorderTopicsAction(subjectId, next.map((t) => t.id)).then(() => router.refresh());
+
+    reorderTopicsAction(subjectId, next.map((t) => t.id)).then(() => {
+      if (sort === "manual") {
+        router.refresh();
+        return;
+      }
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("sort", "manual");
+      router.push(`/subjects/${subjectId}/topics?${params.toString()}`);
+    });
   }
 
   return (
