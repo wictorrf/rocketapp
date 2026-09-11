@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { activityTypeLabel, type Mode, type Phase } from "@/lib/timer/pomodoro";
+import { startOfDayInTimeZone } from "@/lib/utils/timezone";
+import { toLocalDateKey } from "@/lib/utils/format";
 
 export type SubjectTopicOption = {
   subjectId: string;
@@ -136,10 +138,11 @@ export async function getFocusSessionById(sessionId: string): Promise<FocusSessi
 
 // Minutos líquidos de hoje já COMMITADOS (sessões finalizadas). A sessão
 // ativa (se houver) soma seu próprio tempo líquido ao vivo no cliente.
-export async function getTodayNetMinutes(userId: string): Promise<number> {
+// "Hoje" é sempre no fuso da usuária (cookie tz), não no fuso do servidor —
+// mesmo padrão de lib/utils/timezone.ts usado em todo o resto do app.
+export async function getTodayNetMinutes(userId: string, timeZone: string): Promise<number> {
   const supabase = await createClient();
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  const startOfDay = startOfDayInTimeZone(toLocalDateKey(new Date(), timeZone), timeZone);
 
   const { data } = await supabase
     .from("focus_sessions")

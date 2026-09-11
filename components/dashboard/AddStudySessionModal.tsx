@@ -27,6 +27,9 @@ export function AddStudySessionModal({
   const [state, formAction, isPending] = useActionState(logStudySessionAction, initialState);
   const hasSubmitted = useRef(false);
   const router = useRouter();
+  // Uma chave por abertura do modal — protege contra duplo clique/retry de
+  // rede duplicando a sessão (mesmo padrão de ReviewSession.tsx).
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   const [type, setType] = useState("primeiro_contato");
   // Questões sempre precisa de disciplina/assunto (question_logs exige
@@ -108,6 +111,7 @@ export function AddStudySessionModal({
             </div>
           )}
           <input type="hidden" name="linked" value={showLinkFields ? "yes" : "no"} />
+          <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
 
           {showLinkFields && (
             <div className="field-row">

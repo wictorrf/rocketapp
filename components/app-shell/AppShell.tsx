@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import type { FocusSessionState } from "@/lib/queries/focus";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { MobileNav } from "./MobileNav";
+import { FocusMiniTimer } from "@/components/focus/FocusMiniTimer";
 
 export function AppShell({
   streak,
@@ -12,6 +14,7 @@ export function AppShell({
   displayName,
   areaLabel,
   photoUrl,
+  initialActiveSession,
   children,
 }: {
   streak: number;
@@ -19,6 +22,7 @@ export function AppShell({
   displayName: string;
   areaLabel: string;
   photoUrl: string | null;
+  initialActiveSession: FocusSessionState | null;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -44,6 +48,7 @@ export function AppShell({
         <div className="content">{children}</div>
       </div>
       <MobileNav streak={streak} isAdmin={isAdmin} open={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <FocusMiniTimer initialSession={initialActiveSession} />
     </div>
   );
 }

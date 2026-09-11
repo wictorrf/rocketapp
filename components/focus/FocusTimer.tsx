@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { SubjectTopicOption, FocusSessionState } from "@/lib/queries/focus";
@@ -8,12 +8,12 @@ import {
   startFocusSessionAction,
   pauseFocusSessionAction,
   resumeFocusSessionAction,
-  completePhaseAction,
   advanceToNextPhaseAction,
   resetCurrentPhaseAction,
   resetSequenceAction,
   finishFocusSessionAction,
   registerSimuladoResultAction,
+  updateDailyGoalMinutesAction,
 } from "@/lib/actions/focus";
 import {
   PRESETS,
@@ -28,15 +28,13 @@ import {
   activityTypeLabel,
   type PomodoroPreset,
 } from "@/lib/timer/pomodoro";
+import { useFocusPhaseWatcher } from "./useFocusPhaseWatcher";
 
 // "manual" (registro retroativo de sessão de estudo) nunca é selecionável
 // no timer ao vivo — só existe como valor salvo no banco (ver
 // lib/actions/study-sessions.ts), por isso o estado local do seletor de
 // modo é mais estrito que o Mode completo.
 type PickableMode = PomodoroPreset | "simulado";
-
-const SOUND_KEY = "rocket-focus-sound";
-const NOTIF_KEY = "rocket-focus-notif";
 
 type ConclusionModal =
   | { kind: "ciclo"; cycleNumber: number }
@@ -59,25 +57,6 @@ function deriveModal(session: FocusSessionState): ConclusionModal {
   return null;
 }
 
-function playTone(frequency: number, durationMs: number) {
-  try {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = frequency;
-    osc.type = "sine";
-    gain.gain.setValueAtTime(0.16, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationMs / 1000);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + durationMs / 1000);
-  } catch {
-    // som é um extra — nunca deve quebrar o cronômetro
-  }
-}
-
 export function FocusTimer({
   options,
   initialSession,
@@ -91,7 +70,6 @@ export function FocusTimer({
 }) {
   const router = useRouter();
   const [session, setSession] = useState(initialSession);
-  const [nowMs, setNowMs] = useState(() => Date.now());
   const [conflict, setConflict] = useState<FocusSessionState | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -106,7 +84,6 @@ export function FocusTimer({
     netMinutes: number;
     cyclesCompleted: number;
   } | null>(null);
-  const completingRef = useRef(false);
 
   // preparação (antes de iniciar)
   const [selectedTopicId, setSelectedTopicId] = useState(options[0]?.topicId ?? "");
@@ -115,88 +92,29 @@ export function FocusTimer({
   const [activityType, setActivityType] = useState("estudo");
   const [activityTypeCustom, setActivityTypeCustom] = useState("");
 
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [notifEnabled, setNotifEnabled] = useState(false);
+  const { remainingSeconds, liveNetSeconds, soundEnabled, notifEnabled, toggleSound, toggleNotifications } =
+    useFocusPhaseWatcher(session, setSession);
 
-  useEffect(() => {
-    // localStorage só existe no client; lido depois do mount de propósito, pra não divergir da renderização no servidor.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSoundEnabled(localStorage.getItem(SOUND_KEY) !== "0");
-    setNotifEnabled(localStorage.getItem(NOTIF_KEY) === "1");
-  }, []);
+  const [showEditGoal, setShowEditGoal] = useState(false);
+  const [goalHoursInput, setGoalHoursInput] = useState(Math.floor(dailyGoalMinutes / 60));
+  const [goalMinutesInput, setGoalMinutesInput] = useState(dailyGoalMinutes % 60);
+  const [savingGoal, setSavingGoal] = useState(false);
 
-  useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
+  function openEditGoal() {
+    setGoalHoursInput(Math.floor(dailyGoalMinutes / 60));
+    setGoalMinutesInput(dailyGoalMinutes % 60);
+    setShowEditGoal(true);
+  }
 
-  // Detecta e commita a conclusão de fase baseado em hora real (não em
-  // contagem visual) — funciona igual recém-terminado ou depois de
-  // recarregar a página bem no instante em que a fase acabou.
-  useEffect(() => {
-    if (!session || session.status !== "running") return;
-    if (session.phaseRemainingSeconds <= 0) return; // já commitado, aguardando decisão
-    const remaining = session.phaseRemainingSeconds - (nowMs - new Date(session.phaseStartedAt).getTime()) / 1000;
-    if (remaining > 0) return;
-    if (completingRef.current) return;
-    completingRef.current = true;
-    const justPhase = session.phase;
-    const justMode = session.mode;
-    completePhaseAction(session.id).then((result) => {
-      completingRef.current = false;
-      if (result.session) setSession(result.session);
-      if (soundEnabled) {
-        if (justPhase === "foco" || justPhase === "simulado") {
-          playTone(880, 350);
-          setTimeout(() => playTone(1100, 350), 160);
-        } else {
-          playTone(523, 500);
-        }
-      }
-      if (notifEnabled && typeof Notification !== "undefined" && Notification.permission === "granted") {
-        const title = justMode === "simulado" ? "Simulado concluído" : justPhase === "foco" ? "Ciclo concluído" : "Pausa concluída";
-        new Notification(title, { body: "Volte pro Rocket pra continuar." });
-      }
-    });
-  }, [nowMs, session, soundEnabled, notifEnabled]);
+  async function handleSaveGoal() {
+    setSavingGoal(true);
+    await updateDailyGoalMinutesAction(goalHoursInput * 60 + goalMinutesInput);
+    setSavingGoal(false);
+    setShowEditGoal(false);
+    router.refresh();
+  }
 
   const modal = useMemo(() => (session ? deriveModal(session) : null), [session]);
-
-  const remainingSeconds = useMemo(() => {
-    if (!session) return 0;
-    if (session.status === "paused" || session.phaseRemainingSeconds <= 0) return Math.max(0, session.phaseRemainingSeconds);
-    return Math.max(0, session.phaseRemainingSeconds - (nowMs - new Date(session.phaseStartedAt).getTime()) / 1000);
-  }, [session, nowMs]);
-
-  const liveNetSeconds = useMemo(() => {
-    if (!session) return 0;
-    const runningExtra =
-      session.status === "running" && (session.phase === "foco" || session.phase === "simulado") && session.phaseRemainingSeconds > 0
-        ? (nowMs - new Date(session.phaseStartedAt).getTime()) / 1000
-        : 0;
-    return session.netSeconds + runningExtra;
-  }, [session, nowMs]);
-
-  function toggleSound() {
-    const next = !soundEnabled;
-    setSoundEnabled(next);
-    localStorage.setItem(SOUND_KEY, next ? "1" : "0");
-  }
-
-  async function toggleNotifications() {
-    if (notifEnabled) {
-      setNotifEnabled(false);
-      localStorage.setItem(NOTIF_KEY, "0");
-      return;
-    }
-    if (typeof Notification === "undefined") return;
-    if (Notification.permission === "denied") return; // não insiste depois de recusa
-    const perm = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
-    if (perm === "granted") {
-      setNotifEnabled(true);
-      localStorage.setItem(NOTIF_KEY, "1");
-    }
-  }
 
   async function handleStart(forceEndPrevious = false) {
     if (!selectedTopicId) return;
@@ -542,19 +460,18 @@ export function FocusTimer({
           </div>
         </div>
 
-        <div className="focus-goal">
-          <b>Meta do dia</b>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
-            {Math.floor(todayMinutesFromFinished / 60)}h {String(todayMinutesFromFinished % 60).padStart(2, "0")}m /{" "}
-            {Math.floor(dailyGoalMinutes / 60)}h 00m
-          </span>
-          <div className="fg-track">
-            <div
-              className="fg-fill"
-              style={{ width: `${Math.min(100, Math.round((todayMinutesFromFinished / dailyGoalMinutes) * 100))}%` }}
-            />
-          </div>
-        </div>
+        <FocusGoal minutesDone={todayMinutesFromFinished} goalMinutes={dailyGoalMinutes} onEditClick={openEditGoal} />
+        {showEditGoal && (
+          <EditGoalDialog
+            hours={goalHoursInput}
+            minutes={goalMinutesInput}
+            onHoursChange={setGoalHoursInput}
+            onMinutesChange={setGoalMinutesInput}
+            onCancel={() => setShowEditGoal(false)}
+            onSave={handleSaveGoal}
+            saving={savingGoal}
+          />
+        )}
 
         {startError && <p className="error-text">{startError}</p>}
         <div className="focus-controls">
@@ -580,7 +497,6 @@ export function FocusTimer({
   const dotsCompleted =
     session.phase === "foco" && session.phaseRemainingSeconds <= 0 ? session.cycleIndex + 1 : session.cycleIndex;
   const totalTodayMinutes = todayMinutesFromFinished + netMinutesNow;
-  const goalPct = Math.min(100, Math.round((totalTodayMinutes / dailyGoalMinutes) * 100));
 
   return (
     <div className={`focus-screen ${phaseClass}`}>
@@ -588,8 +504,19 @@ export function FocusTimer({
         ‹
       </Link>
 
-      <div className="focus-compact-tag">
-        {session.subjectName}, {session.topicName}, {activityTypeLabel(session.activityType, session.activityTypeCustom)}
+      <div className="focus-session-tags">
+        <div>
+          <span>Disciplina</span>
+          <b>{session.subjectName}</b>
+        </div>
+        <div>
+          <span>Assunto</span>
+          <b>{session.topicName}</b>
+        </div>
+        <div>
+          <span>Tipo de atividade</span>
+          <b>{activityTypeLabel(session.activityType, session.activityTypeCustom)}</b>
+        </div>
       </div>
 
       {modal ? (
@@ -606,7 +533,7 @@ export function FocusTimer({
         <>
           <div className="timer-ring">
             <div className="tr-label">{PHASE_LABEL[session.phase]}</div>
-            {session.mode !== "simulado" && session.phase === "foco" && (
+            {session.mode !== "simulado" && (
               <div className="tr-cycle">
                 Ciclo {(session.cycleIndex % CYCLES_FOR_LONG_BREAK) + 1} de {CYCLES_FOR_LONG_BREAK}
               </div>
@@ -622,16 +549,7 @@ export function FocusTimer({
             </div>
           )}
 
-          <div className="focus-goal">
-            <b>Meta do dia</b>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
-              {Math.floor(totalTodayMinutes / 60)}h {String(totalTodayMinutes % 60).padStart(2, "0")}m /{" "}
-              {Math.floor(dailyGoalMinutes / 60)}h 00m
-            </span>
-            <div className="fg-track">
-              <div className="fg-fill" style={{ width: `${goalPct}%` }} />
-            </div>
-          </div>
+          <FocusGoal minutesDone={totalTodayMinutes} goalMinutes={dailyGoalMinutes} onEditClick={openEditGoal} />
 
           <div className="focus-controls">
             <button className="fc-btn secondary" onClick={() => setShowResetChoice(true)} aria-label="Reiniciar" disabled={pending}>
@@ -704,6 +622,106 @@ export function FocusTimer({
           </div>
         </div>
       )}
+
+      {showEditGoal && (
+        <EditGoalDialog
+          hours={goalHoursInput}
+          minutes={goalMinutesInput}
+          onHoursChange={setGoalHoursInput}
+          onMinutesChange={setGoalMinutesInput}
+          onCancel={() => setShowEditGoal(false)}
+          onSave={handleSaveGoal}
+          saving={savingGoal}
+        />
+      )}
+    </div>
+  );
+}
+
+function FocusGoal({
+  minutesDone,
+  goalMinutes,
+  onEditClick,
+}: {
+  minutesDone: number;
+  goalMinutes: number;
+  onEditClick: () => void;
+}) {
+  const pct = Math.min(100, Math.round((minutesDone / goalMinutes) * 100));
+  return (
+    <div className="focus-goal">
+      <div className="fg-header">
+        <b>Meta do dia</b>
+        <button type="button" className="fg-edit" onClick={onEditClick}>
+          Editar meta
+        </button>
+      </div>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
+        {Math.floor(minutesDone / 60)}h {String(minutesDone % 60).padStart(2, "0")}m /{" "}
+        {Math.floor(goalMinutes / 60)}h {String(goalMinutes % 60).padStart(2, "0")}m
+      </span>
+      <div className="fg-track">
+        <div className="fg-fill" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function EditGoalDialog({
+  hours,
+  minutes,
+  onHoursChange,
+  onMinutesChange,
+  onCancel,
+  onSave,
+  saving,
+}: {
+  hours: number;
+  minutes: number;
+  onHoursChange: (v: number) => void;
+  onMinutesChange: (v: number) => void;
+  onCancel: () => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-box confirm-dialog" onClick={(e) => e.stopPropagation()}>
+        <h2>Editar meta diária</h2>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", margin: "18px 0" }}>
+          <div className="field">
+            <label htmlFor="goal-hours">Horas</label>
+            <input
+              id="goal-hours"
+              type="number"
+              min={0}
+              max={16}
+              value={hours}
+              onChange={(e) => onHoursChange(Math.max(0, Math.min(16, Math.round(Number(e.target.value) || 0))))}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="goal-minutes">Minutos</label>
+            <input
+              id="goal-minutes"
+              type="number"
+              min={0}
+              max={59}
+              step={5}
+              value={minutes}
+              onChange={(e) => onMinutesChange(Math.max(0, Math.min(59, Math.round(Number(e.target.value) || 0))))}
+            />
+          </div>
+        </div>
+        <div className="confirm-dialog-actions">
+          <button type="button" className="btn btn-ghost" onClick={onCancel}>
+            Cancelar
+          </button>
+          <button type="button" className="btn btn-primary" disabled={saving} onClick={onSave}>
+            {saving ? "Salvando..." : "Salvar meta"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

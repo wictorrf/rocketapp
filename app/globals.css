@@ -3184,10 +3184,27 @@ h2.section-title {
   text-align: center;
   min-width: 260px;
 }
+.focus-goal .fg-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
 .focus-goal b {
   font-size: 13px;
-  display: block;
-  margin-bottom: 6px;
+}
+.focus-goal .fg-edit {
+  background: none;
+  border: none;
+  color: var(--pink);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.focus-goal .fg-edit:hover {
+  text-decoration: underline;
 }
 .focus-goal .fg-track {
   height: 6px;
@@ -3264,14 +3281,30 @@ h2.section-title {
 .focus-plain-input::placeholder {
   color: rgba(255, 255, 255, 0.5);
 }
-.focus-compact-tag {
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.7);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+.focus-session-tags {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 18px;
   text-align: center;
+}
+.focus-session-tags div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.focus-session-tags span {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.focus-session-tags b {
+  font-size: 13.5px;
+  color: #fff;
+  font-weight: 700;
 }
 .focus-cycle-dots {
   display: flex;
@@ -3308,6 +3341,77 @@ h2.section-title {
   color: #fff;
   background: rgba(255, 255, 255, 0.12);
 }
+
+/* ---------- mini timer flutuante (fora da tela cheia do Study Time) ---------- */
+.focus-mini-timer {
+  position: fixed;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: none;
+  cursor: grab;
+  touch-action: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  color: #fff;
+  background: #68162e;
+  font-family: var(--font-body);
+  text-align: left;
+  transition: background-color 0.4s ease;
+}
+.focus-mini-timer:active {
+  cursor: grabbing;
+}
+.focus-mini-timer.phase-descanso {
+  background: #2f6f5e;
+}
+.focus-mini-timer.phase-simulado {
+  background: #3f5278;
+}
+.focus-mini-timer:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.focus-mini-timer .fmt-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+.focus-mini-timer .fmt-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.focus-mini-timer .fmt-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.75);
+}
+.focus-mini-timer .fmt-time {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+}
+@media (max-width: 900px) {
+  .focus-mini-timer {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .focus-mini-timer .fmt-icon {
+    font-size: 16px;
+  }
+  .focus-mini-timer .fmt-label {
+    font-size: 10px;
+  }
+  .focus-mini-timer .fmt-time {
+    font-size: 12.5px;
+  }
+}
+
 .focus-conclusion-card {
   max-width: 380px;
   text-align: center;

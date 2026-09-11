@@ -77,6 +77,20 @@ export async function getActiveSessionAction(): Promise<FocusSessionState | null
   return getActiveFocusSession(user.id);
 }
 
+// Edição rápida da meta diária direto na tela do Study Time — grava só
+// profiles.daily_goal_minutes, sem exigir o formulário inteiro de Meu Perfil
+// (nome/área), que updateProfileAction (lib/actions/profile.ts) exige.
+export async function updateDailyGoalMinutesAction(totalMinutes: number): Promise<{ error: string | null }> {
+  const { supabase, user } = await requireUser();
+  const clamped = Number.isFinite(totalMinutes) ? Math.min(960, Math.max(15, Math.round(totalMinutes))) : 120;
+
+  const { error } = await supabase.from("profiles").update({ daily_goal_minutes: clamped }).eq("id", user.id);
+  if (error) return { error: "Não foi possível salvar a meta diária." };
+
+  revalidatePath("/focus");
+  return { error: null };
+}
+
 export async function startFocusSessionAction(params: {
   subjectId: string;
   topicId: string;
@@ -313,11 +327,21 @@ export async function resetSequenceAction(sessionId: string): Promise<FocusActio
 
 export async function finishFocusSessionAction(sessionId: string, discard: boolean): Promise<{ error: string | null }> {
   const { supabase, user } = await requireUser();
-  const { data: row } = await supabase.from("focus_sessions").select("user_id").eq("id", sessionId).single();
+  const { data: row } = await supabase
+    .from("focus_sessions")
+    .select("user_id, subject_id, topic_id")
+    .eq("id", sessionId)
+    .single();
   if (!row || row.user_id !== user.id) return { error: "Sessão não encontrada." };
 
   await finalizeSessionRow(supabase, sessionId, discard);
   revalidateFocusPaths();
+  // Descartada não contabiliza tempo nenhum — só revalida Disciplina/Assunto
+  // quando o tempo foi de fato guardado.
+  if (!discard && row.subject_id) {
+    revalidatePath(`/subjects/${row.subject_id}`);
+    if (row.topic_id) revalidatePath(`/subjects/${row.subject_id}/topics/${row.topic_id}`);
+  }
   return { error: null };
 }
 

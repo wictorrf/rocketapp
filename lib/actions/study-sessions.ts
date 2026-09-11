@@ -37,6 +37,7 @@ export async function logStudySessionAction(_prevState: ActionState, formData: F
   const questionsDone = Number(formData.get("questionsDone") ?? 0);
   const questionsCorrect = Number(formData.get("questionsCorrect") ?? 0);
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const idempotencyKey = String(formData.get("idempotencyKey") ?? "").trim() || null;
 
   if (!dateKey) return { error: "Informe a data da sessão." };
   if (totalMinutes <= 0) return { error: "Informe quanto tempo você estudou." };
@@ -86,8 +87,12 @@ export async function logStudySessionAction(_prevState: ActionState, formData: F
     net_seconds: totalMinutes * 60,
     question_log_id: questionLogId,
     notes,
+    idempotency_key: idempotencyKey,
   });
-  if (error) return { error: "Não foi possível registrar a sessão de estudo." };
+  // Violação de unicidade em idempotency_key = essa exata submissão (duplo
+  // clique, retry de rede) já foi gravada antes — trata como sucesso em vez
+  // de duplicar ou mostrar erro.
+  if (error && error.code !== "23505") return { error: "Não foi possível registrar a sessão de estudo." };
 
   revalidatePath("/dashboard");
   revalidatePath("/metrics");
