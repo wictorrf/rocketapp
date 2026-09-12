@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { weightedAccuracyPct } from "@/lib/metrics/calc";
 
 export type SubjectStatusFilter = "all" | "active" | "archived" | "pending";
 export type SubjectSortKey =
@@ -114,7 +115,7 @@ export async function listSubjectsWithSummary(
     const subjectQuestionLogs = (questionLogs ?? []).filter((q) => subjectTopicIds.has(q.topic_id));
     const totalDone = subjectQuestionLogs.reduce((sum, q) => sum + q.questions_done, 0);
     const totalCorrect = subjectQuestionLogs.reduce((sum, q) => sum + q.questions_correct, 0);
-    const questionsAccuracyPct = totalDone ? Math.round((totalCorrect / totalDone) * 100) : null;
+    const questionsAccuracyPct = weightedAccuracyPct(totalCorrect, totalDone);
     const lastQuestionLogAt = subjectQuestionLogs.map((q) => q.logged_at).sort().at(-1) ?? null;
 
     const subjectFocusSessions = (focusSessions ?? []).filter((f) => f.subject_id === subject.id);

@@ -1,9 +1,22 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { applyGrade, deriveStageLabel, type Grade, type StageLabel, type StoredSrsState } from "@/lib/srs/fsrs";
 import { getFlashcardReviewHistory, type ReviewHistoryEntry } from "@/lib/queries/review";
+
+// Toda revisão gravada alimenta Dashboard, Métricas, hub de Flashcards e o
+// painel do Assunto/Disciplina do cartão — sem isso, navegar de volta a
+// essas telas por link (Router Cache do Next.js) podia mostrar números
+// desatualizados até um reload manual. `subjectId`/`topicId` só quando
+// conhecidos (a revisão só carrega o cartão pelo id).
+function revalidateReviewPaths(subjectId?: string | null, topicId?: string | null) {
+  revalidatePath("/dashboard");
+  revalidatePath("/metrics");
+  revalidatePath("/flashcards");
+  if (subjectId && topicId) revalidatePath(`/subjects/${subjectId}/topics/${topicId}`);
+}
 
 export async function getFlashcardReviewHistoryAction(flashcardId: string): Promise<ReviewHistoryEntry[]> {
   return getFlashcardReviewHistory(flashcardId);
@@ -88,6 +101,13 @@ export async function gradeFlashcardAction(params: {
 
   if (!srsRow) return { error: "Cartão não encontrado.", stage: "novo", intervalLabel: "" };
 
+  const { data: flashcardRow } = await supabase
+    .from("flashcards")
+    .select("topic_id, topics(subject_id)")
+    .eq("id", flashcardId)
+    .maybeSingle();
+  const topicRow = flashcardRow ? (Array.isArray(flashcardRow.topics) ? flashcardRow.topics[0] : flashcardRow.topics) : null;
+
   const before: StoredSrsState = {
     state: srsRow.state,
     dueAt: srsRow.due_at,
@@ -135,6 +155,7 @@ export async function gradeFlashcardAction(params: {
     };
   }
 
+  revalidateReviewPaths(topicRow?.subject_id, flashcardRow?.topic_id);
   return {
     error: null,
     stage: deriveStageLabel(result.after.state, false),
@@ -156,4 +177,6 @@ export async function finishReviewSessionAction(
       cards_remembered: cardsRemembered,
     })
     .eq("id", sessionId);
+
+  revalidateReviewPaths();
 }

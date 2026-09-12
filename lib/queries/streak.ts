@@ -2,21 +2,42 @@ import { createClient } from "@/lib/supabase/server";
 import { toLocalDateKey, addDaysToKey, dateKeyToUtcDate } from "@/lib/utils/format";
 import { WEEKDAY_LABEL_MON_FIRST_PT } from "@/lib/constants/calendar";
 
-// Dias (YYYY-MM-DD, no fuso da usuária) com alguma atividade — Study Time ou
-// revisão de flashcard. Fonte única reaproveitada por computeStreak e
-// getWeekStudyConsistency, pra nunca divergir entre os dois. v1: busca os
-// timestamps e resolve em memória — reavaliar se a base de usuárias crescer
-// muito.
+// Dias (YYYY-MM-DD, no fuso da usuária) com alguma ação válida — sessão de
+// estudo/Study Time, flashcard revisado, questão registrada, ou uma
+// atividade do Checklist/Calendário criada ou concluída (documento de
+// requisitos, "Regra da sequência de estudos": só entrar no Rocket não
+// conta, precisa de uma interação real). Fonte única reaproveitada por
+// computeStreak e getWeekStudyConsistency, pra nunca divergir entre os
+// dois. v1: busca os timestamps e resolve em memória — reavaliar se a base
+// de usuárias crescer muito.
 async function getActiveDayKeys(userId: string, timeZone: string): Promise<Set<string>> {
   const supabase = await createClient();
-  const [{ data: focusRows }, { data: reviewRows }] = await Promise.all([
+  const [
+    { data: focusRows },
+    { data: reviewRows },
+    { data: questionRows },
+    { data: calendarTaskRows },
+    { data: planActionRows },
+  ] = await Promise.all([
     supabase.from("focus_sessions").select("started_at").eq("user_id", userId),
     supabase.from("review_logs").select("reviewed_at").eq("user_id", userId),
+    supabase.from("question_logs").select("logged_at").eq("user_id", userId),
+    supabase.from("calendar_tasks").select("created_at, completed_at").eq("user_id", userId),
+    supabase.from("monthly_plan_actions").select("created_at, completed_at").eq("user_id", userId),
   ]);
 
   const activeDays = new Set<string>();
   for (const row of focusRows ?? []) activeDays.add(toLocalDateKey(new Date(row.started_at), timeZone));
   for (const row of reviewRows ?? []) activeDays.add(toLocalDateKey(new Date(row.reviewed_at), timeZone));
+  for (const row of questionRows ?? []) activeDays.add(toLocalDateKey(new Date(row.logged_at), timeZone));
+  for (const row of calendarTaskRows ?? []) {
+    activeDays.add(toLocalDateKey(new Date(row.created_at), timeZone));
+    if (row.completed_at) activeDays.add(toLocalDateKey(new Date(row.completed_at), timeZone));
+  }
+  for (const row of planActionRows ?? []) {
+    activeDays.add(toLocalDateKey(new Date(row.created_at), timeZone));
+    if (row.completed_at) activeDays.add(toLocalDateKey(new Date(row.completed_at), timeZone));
+  }
   return activeDays;
 }
 

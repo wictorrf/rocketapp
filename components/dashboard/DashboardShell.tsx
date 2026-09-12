@@ -46,17 +46,15 @@ export function DashboardShell({
 
   return (
     <>
-      <div style={{ marginTop: 18 }}>
+      <div className="dashboard-top-row" style={{ marginTop: 18 }}>
+        <IndicatorsGrid
+          flashcardMetrics={indicators.flashcardMetrics}
+          questionMetrics={indicators.questionMetrics}
+          studyTimeMetrics={indicators.studyTimeMetrics}
+          onRegisterQuestions={<QuestionLogQuickEntry subjects={subjects} />}
+        />
         <UpcomingExamsCard exams={upcomingExams} onEdit={setSelectedEvent} onCreate={openCreate} />
       </div>
-
-      <div style={{ height: 18 }} />
-      <IndicatorsGrid
-        flashcardMetrics={indicators.flashcardMetrics}
-        questionMetrics={indicators.questionMetrics}
-        studyTimeMetrics={indicators.studyTimeMetrics}
-        onRegisterQuestions={<QuestionLogQuickEntry subjects={subjects} />}
-      />
 
       <div style={{ marginTop: 18 }}>
         <TodayChecklistCard checklist={todayChecklist} onEdit={setSelectedEvent} onCreate={openCreate} />

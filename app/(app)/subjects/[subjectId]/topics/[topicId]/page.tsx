@@ -5,6 +5,7 @@ import { getTopic, getTopicPanel } from "@/lib/queries/topics";
 import { getQuestionLogSummary } from "@/lib/queries/questions";
 import { getSignedUrls } from "@/lib/queries/storage";
 import { formatHours } from "@/lib/utils/format";
+import { getUserTimezone } from "@/lib/utils/timezone";
 import { FlashcardSection } from "@/components/subjects/FlashcardSection";
 import { NewQuestionLogButton } from "@/components/subjects/NewQuestionLogButton";
 import { QuestionLogList } from "@/components/subjects/QuestionLogList";
@@ -25,7 +26,8 @@ export default async function TopicDetailPage({
   const topic = await getTopic(topicId);
   if (!topic) notFound();
 
-  const panel = await getTopicPanel(topicId);
+  const timeZone = await getUserTimezone();
+  const panel = await getTopicPanel(topicId, timeZone);
   // Só assina de uma vez as imagens das seções abertas por padrão
   // (Precisa de revisão + Consolidados). "Todos os flashcards" começa
   // fechado e assina sob demanda ao ser aberto pela primeira vez — evita

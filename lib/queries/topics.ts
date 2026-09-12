@@ -9,6 +9,8 @@ import {
   type StoredSrsState,
 } from "@/lib/srs/fsrs";
 import { firstReviewPerCardPerDay, isRemembered, weightedAccuracyPct } from "@/lib/metrics/calc";
+import { toLocalDateKey, addDaysToKey } from "@/lib/utils/format";
+import { startOfDayInTimeZone } from "@/lib/utils/timezone";
 
 export type TopicStatusFilter = "all" | "active" | "archived" | "pending" | "with_questions";
 export type TopicSortKey =
@@ -137,7 +139,7 @@ export async function listTopicsForSubject(
       sortOrder: topic.sort_order,
       totalFlashcards: ids.length,
       pendingReviewsCount,
-      questionsAccuracyPct: totalDone ? Math.round((totalCorrect / totalDone) * 100) : null,
+      questionsAccuracyPct: weightedAccuracyPct(totalCorrect, totalDone),
       questionsCount: topicQuestionLogs.length,
       studiedMinutes,
       lastActivityAt,
@@ -301,7 +303,7 @@ export type TopicPanel = {
   all: FlashcardWithState[]; // inclui suspensos — "Todos os flashcards deste assunto"
 };
 
-export async function getTopicPanel(topicId: string): Promise<TopicPanel> {
+export async function getTopicPanel(topicId: string, timeZone: string): Promise<TopicPanel> {
   const supabase = await createClient();
 
   const { data: flashcards } = await supabase
@@ -320,8 +322,12 @@ export async function getTopicPanel(topicId: string): Promise<TopicPanel> {
 
   const now = new Date();
   const nowIso = now.toISOString();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  // Fuso da usuária, não do servidor — mesmo padrão de getFlashcardsHubSummary,
+  // pra "atrasados/hoje" nunca divergir entre o hub de Flashcards e o painel
+  // de um Assunto específico perto da virada do dia.
+  const todayKey = toLocalDateKey(now, timeZone);
+  const startOfToday = startOfDayInTimeZone(todayKey, timeZone);
+  const endOfToday = new Date(startOfDayInTimeZone(addDaysToKey(todayKey, 1), timeZone).getTime() - 1);
 
   const withState: FlashcardWithState[] = (flashcards ?? []).map((f) => {
     const srs = Array.isArray(f.flashcard_srs_state) ? f.flashcard_srs_state[0] : f.flashcard_srs_state;

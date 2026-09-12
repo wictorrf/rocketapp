@@ -17,7 +17,7 @@ export function IndicatorsGrid({
   onRegisterQuestions?: React.ReactNode;
 }) {
   return (
-    <div className="grid cols-3">
+    <div className="grid cols-2-even">
       <div className="card">
         <div className="eyebrow">Tempo líquido de estudo</div>
         <div className="stat-num">{formatStudyDuration(studyTimeMetrics.netMinutes)}</div>

@@ -271,7 +271,11 @@ export async function setEventStatusAction(
   status: "pending" | "done" | "cancelled",
 ): Promise<void> {
   const { supabase, user } = await requireUser();
-  await supabase.from("calendar_tasks").update({ status }).eq("id", eventId).eq("user_id", user.id);
+  // completed_at marca o dia local em que a conclusão aconteceu — alimenta a
+  // sequência de estudos (lib/queries/streak.ts), que precisa saber QUANDO a
+  // atividade foi concluída, não só o status atual.
+  const completedAt = status === "done" ? new Date().toISOString() : null;
+  await supabase.from("calendar_tasks").update({ status, completed_at: completedAt }).eq("id", eventId).eq("user_id", user.id);
   revalidateCalendarPaths();
 }
 
@@ -349,7 +353,10 @@ export async function registerQuestionResultAction(
     .single();
   if (error || !log) return { error: "Não foi possível registrar o resultado." };
 
-  await supabase.from("calendar_tasks").update({ question_log_id: log.id, status: "done" }).eq("id", eventId);
+  await supabase
+    .from("calendar_tasks")
+    .update({ question_log_id: log.id, status: "done", completed_at: new Date().toISOString() })
+    .eq("id", eventId);
   revalidateCalendarPaths();
   revalidatePath("/metrics");
   return { error: null };
@@ -559,7 +566,14 @@ export async function setPlanActionStatusAction(
   status: "pending" | "done" | "archived",
 ): Promise<void> {
   const { supabase, user } = await requireUser();
-  await supabase.from("monthly_plan_actions").update({ status }).eq("id", actionId).eq("user_id", user.id);
+  // completed_at marca o dia local da conclusão pra alimentar a sequência de
+  // estudos (lib/queries/streak.ts) — ver setEventStatusAction acima.
+  const completedAt = status === "done" ? new Date().toISOString() : null;
+  await supabase
+    .from("monthly_plan_actions")
+    .update({ status, completed_at: completedAt })
+    .eq("id", actionId)
+    .eq("user_id", user.id);
   revalidateCalendarPaths();
 }
 

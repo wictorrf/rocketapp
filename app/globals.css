@@ -31,27 +31,18 @@
   --shadow: 0 4px 18px rgba(23, 24, 26, 0.06);
   --shadow-lift: 0 14px 34px rgba(23, 24, 26, 0.12);
 
-  /* Mapeadas para as variáveis geradas pelo next/font/google em app/layout.tsx */
-  --font-display: var(--font-playfair), serif;
-  --font-body: var(--font-inter), sans-serif;
-  --font-mono: var(--font-plex-mono), monospace;
-  --font-script: var(--font-dancing-script), cursive;
-}
-
-/* Dashboard e Calendário (documentos de requisitos): fonte única mais
-   arredondada/jovem pra títulos, textos, números e botões — sobrescreve as
-   3 variáveis de fonte só dentro dessas telas, sem rebrandar o app inteiro.
-   A hierarquia de peso (regular/semibold/bold) já vem das classes
-   existentes (.eyebrow, .section-title, .stat-num etc), que a Nunito Sans
-   cobre. */
-.dashboard-page,
-.calendar-page,
-.subjects-page,
-.metrics-page,
-.flashcards-page {
+  /* Mapeadas para as variáveis geradas pelo next/font/google em
+     app/layout.tsx. Nunito Sans é a identidade tipográfica única de toda a
+     plataforma (documento de requisitos "Ajustes finais") — títulos,
+     textos, botões, menus e números usam as mesmas 3 variáveis abaixo, com
+     a hierarquia de peso vindo das classes existentes (.eyebrow,
+     .section-title, .stat-num etc). Única exceção: .rocket-wordmark
+     referencia --font-playfair diretamente, não este alias, pra manter sua
+     tipografia atual mesmo com essa troca. */
   --font-display: var(--font-nunito-sans), sans-serif;
   --font-body: var(--font-nunito-sans), sans-serif;
   --font-mono: var(--font-nunito-sans), sans-serif;
+  --font-script: var(--font-dancing-script), cursive;
 }
 
 * {
@@ -187,7 +178,10 @@ h2.section-title {
   display: flex;
   align-items: center;
   gap: 9px;
-  font-family: var(--font-display);
+  /* Única exceção à Nunito Sans em toda a plataforma: o logotipo mantém sua
+     tipografia atual (Playfair Display itálico), referenciada direto em vez
+     de --font-display — que agora é Nunito Sans. */
+  font-family: var(--font-playfair), serif;
   font-weight: 600;
   font-style: italic;
   font-size: 24px;
@@ -1440,6 +1434,56 @@ h2.section-title {
   font: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+/* ---------- Dashboard: linha do topo (métricas 2x2 + próximos compromissos) ----------
+   Ajuste do documento de requisitos: métricas ocupam a maior parte da
+   largura à esquerda, compromissos ficam numa coluna menor à direita, sem
+   dominar a tela. Checklist de hoje e Constância de estudos ficam fora
+   dessa linha, intocados. */
+.dashboard-top-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.cols-2-even {
+  grid-template-columns: repeat(2, 1fr);
+}
+.card-compact {
+  padding: 18px 20px;
+}
+.card-highlight-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.card-highlight-head h2.section-title {
+  margin-bottom: 0;
+}
+.see-all-link {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--wine);
+  white-space: nowrap;
+}
+.see-all-link:hover {
+  text-decoration: underline;
+}
+.exam-list-compact {
+  gap: 8px;
+}
+.exam-row-compact {
+  padding: 9px 12px;
+  gap: 11px;
+}
+.exam-row-compact .ex-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+  border-radius: 8px;
 }
 
 /* ---------- Dashboard: cabeçalho ---------- */
@@ -2942,7 +2986,9 @@ h2.section-title {
     display: none;
   }
   .cols-3,
-  .cols-2 {
+  .cols-2,
+  .cols-2-even,
+  .dashboard-top-row {
     grid-template-columns: 1fr;
   }
   .content {
