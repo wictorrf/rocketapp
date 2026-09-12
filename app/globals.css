@@ -1464,10 +1464,15 @@ h2.section-title {
   margin-bottom: 0;
 }
 .see-all-link {
+  font: inherit;
+  border: none;
+  background: none;
+  padding: 0;
   font-size: 12.5px;
   font-weight: 700;
   color: var(--wine);
   white-space: nowrap;
+  cursor: pointer;
 }
 .see-all-link:hover {
   text-decoration: underline;

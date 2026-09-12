@@ -2,12 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { toLocalDateKey, addDaysToKey, dateKeyToUtcDate } from "@/lib/utils/format";
 import { WEEKDAY_LABEL_MON_FIRST_PT } from "@/lib/constants/calendar";
 
-// Dias (YYYY-MM-DD, no fuso da usuária) com alguma ação válida — sessão de
-// estudo/Study Time, flashcard revisado, questão registrada, ou uma
-// atividade do Checklist/Calendário criada ou concluída (documento de
-// requisitos, "Regra da sequência de estudos": só entrar no Rocket não
-// conta, precisa de uma interação real). Fonte única reaproveitada por
-// computeStreak e getWeekStudyConsistency, pra nunca divergir entre os
+// Dias (YYYY-MM-DD, no fuso da usuária) com QUALQUER ação na plataforma —
+// não só sessão de estudo/flashcard/questão/checklist, mas também criar uma
+// disciplina, um assunto ou um flashcard (feedback direto da usuária: esses
+// movimentos não estavam contando pra sequência). Fonte única reaproveitada
+// por computeStreak e getWeekStudyConsistency, pra nunca divergir entre os
 // dois. v1: busca os timestamps e resolve em memória — reavaliar se a base
 // de usuárias crescer muito.
 async function getActiveDayKeys(userId: string, timeZone: string): Promise<Set<string>> {
@@ -18,12 +17,18 @@ async function getActiveDayKeys(userId: string, timeZone: string): Promise<Set<s
     { data: questionRows },
     { data: calendarTaskRows },
     { data: planActionRows },
+    { data: subjectRows },
+    { data: topicRows },
+    { data: flashcardRows },
   ] = await Promise.all([
     supabase.from("focus_sessions").select("started_at").eq("user_id", userId),
     supabase.from("review_logs").select("reviewed_at").eq("user_id", userId),
     supabase.from("question_logs").select("logged_at").eq("user_id", userId),
     supabase.from("calendar_tasks").select("created_at, completed_at").eq("user_id", userId),
     supabase.from("monthly_plan_actions").select("created_at, completed_at").eq("user_id", userId),
+    supabase.from("subjects").select("created_at").eq("user_id", userId),
+    supabase.from("topics").select("created_at").eq("user_id", userId),
+    supabase.from("flashcards").select("created_at").eq("user_id", userId),
   ]);
 
   const activeDays = new Set<string>();
@@ -38,6 +43,9 @@ async function getActiveDayKeys(userId: string, timeZone: string): Promise<Set<s
     activeDays.add(toLocalDateKey(new Date(row.created_at), timeZone));
     if (row.completed_at) activeDays.add(toLocalDateKey(new Date(row.completed_at), timeZone));
   }
+  for (const row of subjectRows ?? []) activeDays.add(toLocalDateKey(new Date(row.created_at), timeZone));
+  for (const row of topicRows ?? []) activeDays.add(toLocalDateKey(new Date(row.created_at), timeZone));
+  for (const row of flashcardRows ?? []) activeDays.add(toLocalDateKey(new Date(row.created_at), timeZone));
   return activeDays;
 }
 
