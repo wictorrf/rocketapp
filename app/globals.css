@@ -3101,6 +3101,11 @@ h2.section-title {
   font-size: 13px;
   margin-bottom: 30px;
 }
+/* A lista nativa do <select> tem fundo branco (não herda o fundo escuro do
+   .focus-tag-select) — sem isso o texto branco fica invisível nas opções. */
+.focus-tag-select option {
+  color: var(--text);
+}
 .focus-mode-select {
   display: flex;
   gap: 8px;
